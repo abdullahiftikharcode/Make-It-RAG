@@ -1,0 +1,11 @@
+{
+    "env": {
+      "DB_HOST": "localhost",
+      "DB_USER": "root",
+      "DB_PASSWORD": "Apple123@",
+      "DB_NAME": "make_it_rag",
+      "DB_PORT": "3306",
+      "PORT": "3001"
+    }
+  }
+  

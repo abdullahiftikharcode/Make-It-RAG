@@ -6,6 +6,7 @@ import google.generativeai as genai
 from haystack.nodes import BaseComponent
 from haystack.pipelines import Pipeline
 from sqlalchemy import create_engine, MetaData, text
+import urllib.parse
 
 # ---------- Utility Functions ----------
 
@@ -20,19 +21,11 @@ def remove_markdown_code_fence(sql_query: str) -> str:
     return sql_query.strip()
 
 def clean_sql_query(sql_query: str) -> str:
-    """
-    Remove newline, tab characters and extra whitespace that are not part of SQL syntax.
-    """
     cleaned = re.sub(r'[\n\t]', ' ', sql_query)
     cleaned = re.sub(r'\s+', ' ', cleaned).strip()
     return cleaned
 
 def get_db_schema(db_url: str) -> dict:
-    """
-    Connect to the database using SQLAlchemy and retrieve the schema via reflection.
-    Returns a dictionary where each key is a table name and the value contains
-    the table's columns, primary keys, and foreign keys.
-    """
     engine = create_engine(db_url)
     metadata = MetaData()
     metadata.reflect(bind=engine)
@@ -180,6 +173,7 @@ def build_pipeline(api_key: str) -> Pipeline:
     pipeline.add_node(component=agentic_node, name="AgenticSQLGenerator", inputs=["Query"])
     return pipeline
 
+# ----- CHANGED: Convert SQLAlchemy rows to dicts using row._mapping -----
 def execute_sql_query(db_url: str, sql_query: str):
     """
     Execute the SQL query using SQLAlchemy and return the fetched data and column names.
@@ -188,15 +182,11 @@ def execute_sql_query(db_url: str, sql_query: str):
     engine = create_engine(db_url)
     with engine.connect() as conn:
         result = conn.execute(text(sql_query))
-        data = result.fetchall()
-        columns = result.keys()
+        data = [dict(row._mapping) for row in result.fetchall()]
+        columns = list(result.keys())
     return columns, data
 
 def generate_natural_language_response(user_query: str, columns, data):
-    """
-    Generate a natural language summary of the query results.
-    The summary will be formatted in bullet points and include concrete details.
-    """
     prompt = (
         "You are an expert data interpreter. Based on the following query results, provide a clear and detailed summary in bullet points. "
         "Include specific details and avoid mentioning SQL or technical details.\n\n"
@@ -228,17 +218,13 @@ async def generate_sql(req: QueryRequest):
         table_structure = get_db_schema(req.db_url)
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Error retrieving schema: {str(e)}")
-
-    # Use your API key for generative AI
+    
     API_KEY = "AIzaSyD6w2zcsXw-F6KGmlCQBUTQpQ6F2a9qlWs"
-
-    # Validate the natural language query
     validator = QueryValidator(api_key=API_KEY)
     valid_result, _ = validator.run(query=req.query, table_structure=table_structure)
     if not valid_result["is_valid"]:
         raise HTTPException(status_code=400, detail="False: The query is not related to the provided table schema.")
 
-    # Build and run the pipeline
     pipeline = build_pipeline(API_KEY)
     result = pipeline.run(
         query=req.query,
@@ -247,7 +233,7 @@ async def generate_sql(req: QueryRequest):
             "AgenticSQLGenerator": {"table_structure": table_structure, "dialect": req.dialect}
         }
     )
-
+    
     if result["sql_query"] is None:
         raise HTTPException(status_code=400, detail=result["message"])
     sql_query = result["sql_query"]
@@ -256,7 +242,7 @@ async def generate_sql(req: QueryRequest):
         columns, data = execute_sql_query(req.db_url, sql_query)
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Error executing SQL query: {str(e)}")
-
+    
     explanation = generate_natural_language_response(req.query, columns, data)
     return {
         "sql_query": sql_query,
@@ -264,3 +250,16 @@ async def generate_sql(req: QueryRequest):
         "data": data,
         "explanation": explanation
     }
+
+# ---------- New Endpoint: Return Database Schema ----------
+
+@app.get("/schema")
+async def schema_endpoint(db_url: str):
+    if not db_url:
+        raise HTTPException(status_code=400, detail="Please provide a database connection string.")
+    try:
+        schema = get_db_schema(db_url)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Error retrieving schema: {str(e)}")
+    return {"schema": schema}
+

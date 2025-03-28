@@ -13,13 +13,18 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { LogOut } from "lucide-react"
+import Cookies from 'js-cookie'
 
 export function LogoutDialog() {
   const [isOpen, setIsOpen] = useState(false)
   const router = useRouter()
 
   const handleLogout = () => {
-    // This would be replaced with your actual logout logic
+    // Clear stored token and user data from both localStorage and cookies
+    localStorage.removeItem('auth_token')
+    localStorage.removeItem('user_data')
+    Cookies.remove('auth_token')
+    
     setTimeout(() => {
       setIsOpen(false)
       router.push("/")

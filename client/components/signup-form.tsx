@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -23,15 +22,43 @@ export function SignupForm() {
     const password = formData.get("password") as string
     const name = formData.get("name") as string
 
-    // This would be replaced with your actual signup API call
-    setTimeout(() => {
-      setIsLoading(false)
-      toast({
-        title: "Account created!",
-        description: "You've successfully signed up for SQL Chat Assistant.",
+    try {
+      const response = await fetch("http://localhost:3001/signup", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ name, email, password }),
       })
-      router.push("/dashboard")
-    }, 2000)
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        toast({
+          title: "Error",
+          description: data.error || "Something went wrong",
+          variant: "destructive",
+        })
+      } else {
+        // Store the token and user data in localStorage
+        localStorage.setItem('auth_token', data.token)
+        localStorage.setItem('user_data', JSON.stringify(data.user))
+        
+        toast({
+          title: "Account created!",
+          description: "You've successfully signed up for SQL Chat Assistant.",
+        })
+        router.push("/dashboard")
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Network error, please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -78,10 +105,11 @@ export function SignupForm() {
               required
             />
           </div>
-          <Button disabled={isLoading}>{isLoading ? "Creating account..." : "Create account"}</Button>
+          <Button disabled={isLoading}>
+            {isLoading ? "Creating account..." : "Create account"}
+          </Button>
         </div>
       </form>
     </div>
   )
 }
-

@@ -1,36 +1,110 @@
 "use client"
 
 import type React from "react"
-
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/components/ui/use-toast"
+import Cookies from 'js-cookie'
 
 export function LoginForm() {
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
   const { toast } = useToast()
 
+  // Check for valid token when component mounts
+  useEffect(() => {
+    const checkStoredToken = async () => {
+      const storedToken = localStorage.getItem('auth_token')
+      if (!storedToken) return
+
+      try {
+        const validateResponse = await fetch("http://localhost:3001/validate-token", {
+          method: "GET",
+          headers: {
+            "Authorization": `Bearer ${storedToken}`,
+            "Content-Type": "application/json",
+          },
+        })
+
+        if (validateResponse.ok) {
+          // Token is valid, automatically log in
+          toast({
+            title: "Login successful!",
+            description: "Welcome back to SQL Chat Assistant.",
+          })
+          router.push("/dashboard")
+        } else {
+          // Token is invalid, clear it
+          localStorage.removeItem('auth_token')
+          localStorage.removeItem('user_data')
+          Cookies.remove('auth_token')
+        }
+      } catch (error) {
+        // Network error or other issues, clear token
+        localStorage.removeItem('auth_token')
+        localStorage.removeItem('user_data')
+        Cookies.remove('auth_token')
+      }
+    }
+
+    checkStoredToken()
+  }, [router, toast])
+
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setIsLoading(true)
 
-    const formData = new FormData(event.currentTarget)
-    const email = formData.get("email") as string
-    const password = formData.get("password") as string
+    try {
+      const formData = new FormData(event.currentTarget)
+      const email = formData.get("email") as string
+      const password = formData.get("password") as string
 
-    // This would be replaced with your actual login API call
-    setTimeout(() => {
-      setIsLoading(false)
-      toast({
-        title: "Login successful!",
-        description: "Welcome back to SQL Chat Assistant.",
+      const response = await fetch("http://localhost:3001/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password }),
       })
-      router.push("/dashboard")
-    }, 2000)
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        toast({
+          title: "Error",
+          description: data.error || "Something went wrong",
+          variant: "destructive",
+        })
+      } else {
+        // Store the token in both localStorage and cookie
+        localStorage.setItem('auth_token', data.token)
+        localStorage.setItem('user_data', JSON.stringify(data.user))
+        
+        // Set cookie with token (expires in 1 hour)
+        Cookies.set('auth_token', data.token, { 
+          expires: 1/24, // 1 hour
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'strict'
+        })
+        
+        toast({
+          title: "Login successful!",
+          description: "Welcome back to SQL Chat Assistant.",
+        })
+        router.push("/dashboard")
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Network error, please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -64,7 +138,9 @@ export function LoginForm() {
               required
             />
           </div>
-          <Button disabled={isLoading}>{isLoading ? "Signing in..." : "Sign in"}</Button>
+          <Button disabled={isLoading}>
+            {isLoading ? "Signing in..." : "Sign in"}
+          </Button>
         </div>
       </form>
       <div className="relative">
@@ -96,4 +172,3 @@ export function LoginForm() {
     </div>
   )
 }
-

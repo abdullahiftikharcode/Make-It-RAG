@@ -20,15 +20,62 @@ export function NewConnectionForm() {
     event.preventDefault()
     setIsLoading(true)
 
-    // This would be replaced with your actual API call to save the connection
-    setTimeout(() => {
-      setIsLoading(false)
-      toast({
-        title: "Connection added!",
-        description: "Your database connection has been successfully added.",
+    const formData = new FormData(event.currentTarget)
+    const name = formData.get("name") as string
+    const type = formData.get("type") as string
+    const connectionString = formData.get("connection-string") as string
+
+    try {
+      // Get the auth token from localStorage
+      const token = localStorage.getItem('auth_token')
+      if (!token) {
+        toast({
+          title: "Error",
+          description: "Please log in to add a connection.",
+          variant: "destructive",
+        })
+        router.push("/login")
+        return
+      }
+
+      const response = await fetch("http://localhost:3001/api/connections", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          name,
+          type,
+          connectionString
+        }),
       })
-      router.push("/dashboard/chat/new")
-    }, 2000)
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        toast({
+          title: "Error",
+          description: data.error || "Failed to create connection",
+          variant: "destructive",
+        })
+      } else {
+        toast({
+          title: "Connection added!",
+          description: "Your database connection has been successfully added.",
+        })
+        // Route to the chat page with the new connection's ID
+        router.push(`/dashboard/chat/${data.connection.id}`)
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Network error, please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -42,11 +89,11 @@ export function NewConnectionForm() {
           <div className="space-y-4">
             <div>
               <Label htmlFor="name">Connection Name</Label>
-              <Input id="name" placeholder="My Production Database" required disabled={isLoading} />
+              <Input id="name" name="name" placeholder="My Production Database" required disabled={isLoading} />
             </div>
             <div>
               <Label>Database Type</Label>
-              <RadioGroup defaultValue="postgresql" className="grid grid-cols-3 gap-4 pt-2">
+              <RadioGroup name="type" defaultValue="postgresql" className="grid grid-cols-3 gap-4 pt-2">
                 <div>
                   <RadioGroupItem value="postgresql" id="postgresql" className="peer sr-only" disabled={isLoading} />
                   <Label
@@ -124,6 +171,7 @@ export function NewConnectionForm() {
               <Label htmlFor="connection-string">Connection String</Label>
               <Input
                 id="connection-string"
+                name="connection-string"
                 placeholder="postgresql://username:password@localhost:5432/database"
                 required
                 disabled={isLoading}
