@@ -1021,6 +1021,86 @@ app.post('/api/connections/:connectionId/reconnect', verifyToken, async (req, re
   }
 });
 
+// GET /api/chat-sessions endpoint to fetch all chat sessions for the user
+app.get('/api/chats', verifyToken, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    // Query retrieves the connection name instead of a session title.
+    const query = `
+      SELECT 
+        cs.id AS sessionId,
+        dc.name AS connectionName,
+        cs.created_at,
+        cs.updated_at,
+        (
+          SELECT content 
+          FROM chat_messages 
+          WHERE session_id = cs.id AND role = 'user' 
+          ORDER BY created_at ASC 
+          LIMIT 1
+        ) AS firstQuery,
+        (
+          SELECT COUNT(*) 
+          FROM chat_messages 
+          WHERE session_id = cs.id
+        ) AS messageCount
+      FROM chat_sessions cs
+      JOIN database_connections dc ON cs.connection_id = dc.id
+      WHERE cs.user_id = ?
+      ORDER BY cs.updated_at DESC
+    `;
+    
+    db.query(query, [userId], (err, sessions) => {
+      if (err) {
+        console.error('Error fetching chat sessions:', err);
+        return res.status(500).json({ error: 'Failed to fetch chat sessions' });
+      }
+      res.json({ sessions });
+    });
+  } catch (error) {
+    console.error('Error fetching chat sessions:', error);
+    res.status(500).json({ error: 'Failed to fetch chat sessions' });
+  }
+});
+
+// DELETE /api/chat-sessions/:sessionId endpoint to delete a chat session and its messages
+app.delete('/api/chats/:sessionId', verifyToken, (req, res) => {
+  const { sessionId } = req.params;
+  const userId = req.user.userId;
+
+  // First, verify that the session belongs to the user
+  const checkQuery = 'SELECT id FROM chat_sessions WHERE id = ? AND user_id = ?';
+  db.query(checkQuery, [sessionId, userId], (err, results) => {
+    if (err) {
+      console.error('Error verifying chat session:', err);
+      return res.status(500).json({ error: 'Error verifying chat session.' });
+    }
+    if (results.length === 0) {
+      return res.status(404).json({ error: 'Chat session not found.' });
+    }
+
+    // Delete all messages for the session
+    const deleteMessagesQuery = 'DELETE FROM chat_messages WHERE session_id = ?';
+    db.query(deleteMessagesQuery, [sessionId], (err, result) => {
+      if (err) {
+        console.error('Error deleting chat messages:', err);
+        return res.status(500).json({ error: 'Error deleting chat messages.' });
+      }
+      // Delete the session record as well
+      const deleteSessionQuery = 'DELETE FROM chat_sessions WHERE id = ?';
+      db.query(deleteSessionQuery, [sessionId], (err, result) => {
+        if (err) {
+          console.error('Error deleting chat session:', err);
+          return res.status(500).json({ error: 'Error deleting chat session.' });
+        }
+        res.json({ message: 'Chat session deleted successfully.' });
+      });
+    });
+  });
+});
+
+
+
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
 });
