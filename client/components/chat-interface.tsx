@@ -368,19 +368,19 @@ export function ChatInterface({ connectionId, sessionId }: ChatInterfaceProps) {
 
   const handleSendMessage = async () => {
     if (!input.trim()) return
-
+  
     const userMessage: Message = {
       id: Date.now().toString(),
       role: "user",
       content: input,
       timestamp: new Date(),
     }
-
+  
     // Add user message immediately for better UX
     setMessages((prev) => [...prev, userMessage])
     setInput("")
     setIsLoading(true)
-
+  
     try {
       const token = localStorage.getItem("auth_token")
       if (!token) {
@@ -391,47 +391,81 @@ export function ChatInterface({ connectionId, sessionId }: ChatInterfaceProps) {
         })
         return
       }
-
+  
       // Get current session ID from URL if it exists
-      const urlParts = window.location.pathname.split('/')
-      const currentSessionId = urlParts[urlParts.length - 1]
-      const isValidSessionId = currentSessionId && currentSessionId !== 'new' && currentSessionId !== connectionId
-
+      const urlParts = window.location.pathname.split("/")
+      let currentSessionId: string | undefined = urlParts[urlParts.length - 1].trim()
+      console.log("Extracted URL segment:", currentSessionId)
+  
+      // If the current session ID is "new" or equals the connectionId or starts with "conn-", then treat it as invalid
+      if (
+        currentSessionId === "new" ||
+        currentSessionId === connectionId ||
+        currentSessionId.startsWith("conn-")
+      ) {
+        currentSessionId = undefined
+      }
+  
+      // Determine the proper connectionId.
+      // If we have a valid sessionId, fetch its details to get the correct connectionId.
+      let localConnectionId = connectionId
+      if (currentSessionId) {
+        const sessionResponse = await fetch(`http://localhost:3001/api/chat-sessions/${connectionId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        const sessionData = await sessionResponse.json()
+        if (!sessionResponse.ok) {
+          throw new Error(sessionData.error || "Failed to fetch session details")
+        }
+        localConnectionId = sessionData.connectionId
+        console.log("Fetched connectionId from session:", localConnectionId)
+      }
+  
+      // Build the payload conditionally (only include sessionId if valid)
+      const payload: {
+        connectionId: string,
+        query: string,
+        sessionId?: string,
+        settings: { query_timeout: number, show_sql_queries: boolean }
+      } = {
+        connectionId: localConnectionId,
+        query: input,
+        settings: {
+          query_timeout: settings?.query_timeout || 30,
+          show_sql_queries: settings?.show_sql_queries ?? true,
+        },
+      }
+      if (currentSessionId) {
+        payload.sessionId = currentSessionId
+      }
+  
       const response = await fetch("http://localhost:3001/api/chat", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          connectionId,
-          query: input,
-          sessionId: isValidSessionId ? currentSessionId : undefined,
-          settings: {
-            query_timeout: settings?.query_timeout || 30,
-            show_sql_queries: settings?.show_sql_queries ?? true
-          }
-        }),
+        body: JSON.stringify(payload),
       })
-
+  
       const data = await response.json()
       if (!response.ok) {
         throw new Error(data.error || "Failed to get response")
       }
-
+  
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
         content: data.explanation || "Sorry, I couldn't process your request.",
         timestamp: new Date(Date.now() + 1000), // Add 1 second to ensure correct ordering
-        sql: settings?.show_sql_queries ? data.sql_query : undefined
+        sql: settings?.show_sql_queries ? data.sql_query : undefined,
       }
-
+  
       setMessages((prev) => [...prev, assistantMessage])
-
-      // If this is a new chat session, update the URL with the session ID
-      if (data.sessionId && !isValidSessionId) {
-        window.history.pushState({}, '', `/dashboard/chat/${data.sessionId}`)
+  
+      // If this is a new chat session (i.e. no valid sessionId was provided) update the URL with the new sessionId.
+      if (data.sessionId && !currentSessionId) {
+        window.history.pushState({}, "", `/dashboard/chat/${data.sessionId}`)
       }
     } catch (error) {
       const errorMessage: Message = {
@@ -441,14 +475,15 @@ export function ChatInterface({ connectionId, sessionId }: ChatInterfaceProps) {
           error instanceof Error
             ? error.message
             : "An unexpected error occurred. Please try again.",
-        timestamp: new Date(Date.now() + 1000), // Add 1 second to ensure correct ordering
-        sql: undefined
+        timestamp: new Date(Date.now() + 1000),
+        sql: undefined,
       }
       setMessages((prev) => [...prev, errorMessage])
     } finally {
       setIsLoading(false)
     }
   }
+  
 
   const fetchSchema = async () => {
     if (!connectionId || connectionId === "new") return

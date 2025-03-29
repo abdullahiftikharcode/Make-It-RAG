@@ -1,3 +1,6 @@
+"use client"
+
+import React, { useState, useEffect } from "react"
 import { DashboardHeader } from "@/components/dashboard-header"
 import { DashboardShell } from "@/components/dashboard-shell"
 import { Button } from "@/components/ui/button"
@@ -6,6 +9,47 @@ import { Database, Plus } from "lucide-react"
 import Link from "next/link"
 
 export default function DashboardPage() {
+  const [stats, setStats] = useState({
+    totalQueries: 0,
+    activeConnections: 0,
+    savedChats: 0,
+    queriesThisWeek: 0,
+    activeConnectionsThisWeek: 0,
+    savedChatsThisWeek: 0,
+  })
+  const [isLoading, setIsLoading] = useState(false)
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      setIsLoading(true)
+      try {
+        const token = localStorage.getItem("auth_token")
+        if (!token) {
+          // You might want to handle not logged-in state appropriately.
+          return
+        }
+        const response = await fetch("http://localhost:3001/api/dashboard/stats", {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        })
+        const data = await response.json()
+        if (!response.ok) {
+          throw new Error(data.error || "Failed to fetch dashboard stats")
+        }
+        setStats(data)
+      } catch (error: any) {
+        console.error("Error fetching stats:", error.message)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchStats()
+  }, [])
+
   return (
     <DashboardShell>
       <DashboardHeader heading="Dashboard" text="Manage your database connections and chat history.">
@@ -34,8 +78,8 @@ export default function DashboardPage() {
             </svg>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">24</div>
-            <p className="text-xs text-muted-foreground">+10% from last month</p>
+            <div className="text-2xl font-bold">{stats.totalQueries}</div>
+            <p className="text-xs text-muted-foreground">This week: +{stats.queriesThisWeek} queries</p>
           </CardContent>
         </Card>
         <Card>
@@ -44,8 +88,8 @@ export default function DashboardPage() {
             <Database className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">2</div>
-            <p className="text-xs text-muted-foreground">+1 new connection this week</p>
+            <div className="text-2xl font-bold">{stats.activeConnections}</div>
+            <p className="text-xs text-muted-foreground">This week: +{stats.activeConnectionsThisWeek} active</p>
           </CardContent>
         </Card>
         <Card>
@@ -65,8 +109,8 @@ export default function DashboardPage() {
             </svg>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">8</div>
-            <p className="text-xs text-muted-foreground">+2 saved this week</p>
+            <div className="text-2xl font-bold">{stats.savedChats}</div>
+            <p className="text-xs text-muted-foreground">This week: +{stats.savedChatsThisWeek} saved</p>
           </CardContent>
         </Card>
       </div>
@@ -160,4 +204,3 @@ export default function DashboardPage() {
     </DashboardShell>
   )
 }
-

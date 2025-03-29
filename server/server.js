@@ -234,7 +234,7 @@ app.post('/login', (req, res) => {
 app.post('/api/chat', verifyToken, async (req, res) => {
   const { connectionId, query, sessionId, settings } = req.body;
   const userId = req.user.userId;
-
+  console.log(connectionId)
   if (!connectionId || !query) {
     return res.status(400).json({ error: 'Missing required fields' });
   }
@@ -778,7 +778,6 @@ app.get('/api/chat-sessions/:sessionId', verifyToken, async (req, res) => {
 app.get('/api/chat-sessions/connection/:connectionId', verifyToken, async (req, res) => {
   const { connectionId } = req.params;
   const userId = req.user.userId;
-
   try {
     // Verify that the connection belongs to the user
     const connectionQuery = `
@@ -791,7 +790,7 @@ app.get('/api/chat-sessions/connection/:connectionId', verifyToken, async (req, 
         console.error('Error verifying connection:', err);
         return res.status(500).json({ error: 'Error verifying connection' });
       }
-
+      
       if (results.length === 0) {
         return res.status(404).json({ error: 'Connection not found or inactive' });
       }
@@ -1099,6 +1098,97 @@ app.delete('/api/chats/:sessionId', verifyToken, (req, res) => {
   });
 });
 
+// GET /api/dashboard/stats endpoint to fetch dashboard statistics
+app.get('/api/dashboard/stats', verifyToken, (req, res) => {
+  const userId = req.user.userId;
+
+  // Query for total queries (assumed to be chat messages from the user)
+  const totalQueriesQuery = `
+    SELECT COUNT(*) AS totalQueries
+    FROM chat_messages cm
+    JOIN chat_sessions cs ON cm.session_id = cs.id
+    WHERE cs.user_id = ? AND cm.role = 'user'
+  `;
+
+  // Query for active connections for the user
+  const activeConnectionsQuery = `
+    SELECT COUNT(*) AS activeConnections
+    FROM database_connections
+    WHERE user_id = ? AND is_active = true
+  `;
+
+  // Query for saved chats (i.e. chat sessions)
+  const savedChatsQuery = `
+    SELECT COUNT(*) AS savedChats
+    FROM chat_sessions
+    WHERE user_id = ?
+  `;
+
+  // Queries for this week data using YEARWEEK with mode 1 (week starts on Monday)
+  const queriesThisWeekQuery = `
+    SELECT COUNT(*) AS queriesThisWeek
+    FROM chat_messages cm
+    JOIN chat_sessions cs ON cm.session_id = cs.id
+    WHERE cs.user_id = ? 
+      AND cm.role = 'user' 
+      AND YEARWEEK(cm.created_at, 1) = YEARWEEK(CURDATE(), 1)
+  `;
+
+  const activeConnectionsThisWeekQuery = `
+    SELECT COUNT(*) AS activeConnectionsThisWeek
+    FROM database_connections
+    WHERE user_id = ? 
+      AND is_active = true 
+      AND YEARWEEK(created_at, 1) = YEARWEEK(CURDATE(), 1)
+  `;
+
+  const savedChatsThisWeekQuery = `
+    SELECT COUNT(*) AS savedChatsThisWeek
+    FROM chat_sessions
+    WHERE user_id = ? 
+      AND YEARWEEK(created_at, 1) = YEARWEEK(CURDATE(), 1)
+  `;
+
+  // Use the promise interface for cleaner asynchronous code
+  const promiseDb = db.promise();
+
+  Promise.all([
+    promiseDb.query(totalQueriesQuery, [userId]),
+    promiseDb.query(activeConnectionsQuery, [userId]),
+    promiseDb.query(savedChatsQuery, [userId]),
+    promiseDb.query(queriesThisWeekQuery, [userId]),
+    promiseDb.query(activeConnectionsThisWeekQuery, [userId]),
+    promiseDb.query(savedChatsThisWeekQuery, [userId]),
+  ])
+    .then(([
+      totalQueriesResult,
+      activeConnectionsResult,
+      savedChatsResult,
+      queriesThisWeekResult,
+      activeConnectionsThisWeekResult,
+      savedChatsThisWeekResult
+    ]) => {
+      const totalQueries = totalQueriesResult[0][0].totalQueries;
+      const activeConnections = activeConnectionsResult[0][0].activeConnections;
+      const savedChats = savedChatsResult[0][0].savedChats;
+      const queriesThisWeek = queriesThisWeekResult[0][0].queriesThisWeek;
+      const activeConnectionsThisWeek = activeConnectionsThisWeekResult[0][0].activeConnectionsThisWeek;
+      const savedChatsThisWeek = savedChatsThisWeekResult[0][0].savedChatsThisWeek;
+      
+      res.json({
+        totalQueries,
+        activeConnections,
+        savedChats,
+        queriesThisWeek,
+        activeConnectionsThisWeek,
+        savedChatsThisWeek,
+      });
+    })
+    .catch((error) => {
+      console.error("Error fetching dashboard stats:", error);
+      res.status(500).json({ error: "Error fetching dashboard stats." });
+    });
+});
 
 
 app.listen(PORT, () => {
