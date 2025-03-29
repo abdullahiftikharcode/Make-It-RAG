@@ -154,7 +154,7 @@ export function ChatInterface({ connectionId, sessionId }: ChatInterfaceProps) {
   
       // Use the connectionId prop if available; otherwise, use the one from session data.
       const targetConnectionId = data.connectionId;
-      console.log("this is connection id",data.connectionId)
+
       if (!targetConnectionId) {
         throw new Error("No valid connection ID available to fetch schema")
       }
@@ -222,7 +222,7 @@ export function ChatInterface({ connectionId, sessionId }: ChatInterfaceProps) {
         })
         return
       }
-    
+
       const response = await fetch(`http://localhost:3001/api/chat-sessions/connection/${connectionId}`, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -365,7 +365,6 @@ export function ChatInterface({ connectionId, sessionId }: ChatInterfaceProps) {
       </Card>
     )
   }
-
   const handleSendMessage = async () => {
     if (!input.trim()) return
   
@@ -392,12 +391,11 @@ export function ChatInterface({ connectionId, sessionId }: ChatInterfaceProps) {
         return
       }
   
-      // Get current session ID from URL if it exists
+      // Extract the last URL segment as a potential sessionId
       const urlParts = window.location.pathname.split("/")
       let currentSessionId: string | undefined = urlParts[urlParts.length - 1].trim()
-      console.log("Extracted URL segment:", currentSessionId)
   
-      // If the current session ID is "new" or equals the connectionId or starts with "conn-", then treat it as invalid
+      // If the extracted segment is "new", equals the connectionId, or starts with "conn-", treat it as invalid
       if (
         currentSessionId === "new" ||
         currentSessionId === connectionId ||
@@ -406,22 +404,35 @@ export function ChatInterface({ connectionId, sessionId }: ChatInterfaceProps) {
         currentSessionId = undefined
       }
   
-      // Determine the proper connectionId.
-      // If we have a valid sessionId, fetch its details to get the correct connectionId.
+      // Determine proper connectionId.
+      // If we have a sessionId, attempt to fetch session details using both sessionId and connectionId concurrently.
       let localConnectionId = connectionId
       if (currentSessionId) {
-        const sessionResponse = await fetch(`http://localhost:3001/api/chat-sessions/${connectionId}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        })
-        const sessionData = await sessionResponse.json()
-        if (!sessionResponse.ok) {
-          throw new Error(sessionData.error || "Failed to fetch session details")
+        try {
+          const fetchWithSessionId = fetch(`http://localhost:3001/api/chat-sessions/${currentSessionId}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }).then(async (res) => {
+            if (!res.ok) throw new Error("SessionId fetch failed")
+            return res.json()
+          })
+  
+          const fetchWithConnectionId = fetch(`http://localhost:3001/api/chat-sessions/${connectionId}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }).then(async (res) => {
+            if (!res.ok) throw new Error("ConnectionId fetch failed")
+            return res.json()
+          })
+  
+          // Use Promise.any so that if one fetch resolves, we use its response.
+          const sessionData = await Promise.any([fetchWithSessionId, fetchWithConnectionId])
+          localConnectionId = sessionData.connectionId
+        } catch (err) {
+          // Fallback: if both requests fail, we continue using the connectionId from props.
+          console.error("Error fetching session details, using fallback connectionId:", err)
         }
-        localConnectionId = sessionData.connectionId
-        console.log("Fetched connectionId from session:", localConnectionId)
       }
   
-      // Build the payload conditionally (only include sessionId if valid)
+      // Build payload conditionally—include sessionId only if it’s valid.
       const payload: {
         connectionId: string,
         query: string,
@@ -463,7 +474,7 @@ export function ChatInterface({ connectionId, sessionId }: ChatInterfaceProps) {
   
       setMessages((prev) => [...prev, assistantMessage])
   
-      // If this is a new chat session (i.e. no valid sessionId was provided) update the URL with the new sessionId.
+      // If this is a new chat session, update the URL with the new sessionId.
       if (data.sessionId && !currentSessionId) {
         window.history.pushState({}, "", `/dashboard/chat/${data.sessionId}`)
       }
@@ -483,6 +494,7 @@ export function ChatInterface({ connectionId, sessionId }: ChatInterfaceProps) {
       setIsLoading(false)
     }
   }
+  
   
 
   const fetchSchema = async () => {
@@ -506,7 +518,6 @@ export function ChatInterface({ connectionId, sessionId }: ChatInterfaceProps) {
       const isValidSessionId = currentSessionId !== connectionId
       var cleanid =''
       if (isValidSessionId) {
-        console.log(currentSessionId)
         if (currentSessionId.startsWith("sess-")) {
             cleanid = currentSessionId.replace("sess-", "");
         }

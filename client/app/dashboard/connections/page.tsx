@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Database, Edit, Plus, Trash2 } from "lucide-react"
 import Link from "next/link"
 import { useToast } from "@/components/ui/use-toast"
+import { useRouter } from "next/navigation"
 
 interface Connection {
   id: string;
@@ -26,6 +27,7 @@ interface Connection {
 export default function ConnectionsPage() {
   const [connections, setConnections] = useState<Connection[]>([]);
   const { toast } = useToast();
+  const router = useRouter();
 
   // Function to fetch connections from the server
   useEffect(() => {
@@ -100,6 +102,47 @@ export default function ConnectionsPage() {
     }
   };
 
+  // Handler to start a new chat session for a connection
+  const handleStartChat = async (connectionId: string) => {
+    try {
+      const token = localStorage.getItem("auth_token");
+      if (!token) {
+        toast({
+          title: "Error",
+          description: "Please log in to continue.",
+          variant: "destructive",
+        });
+        return;
+      }
+      // Create a new chat session via the API.
+      // We use an empty messages array (or you could include a default system message) and a default title.
+      const response = await fetch("http://localhost:3001/api/chat-sessions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          connectionId,
+          title: "New Chat",
+          messages: [] // You can provide an initial message if desired
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to start chat session");
+      }
+      // Navigate to the chat page using the newly created session ID.
+      router.push(`/dashboard/chat/${connectionId}`);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to start chat session",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <DashboardShell>
       <DashboardHeader heading="Database Connections" text="Manage your database connections.">
@@ -155,12 +198,9 @@ export default function ConnectionsPage() {
               </div>
             </CardContent>
             <CardFooter className="flex justify-between pt-3">
-              {/* Prefix the connection id with "conn-" so ChatPage can distinguish it */}
-              <Link href={`/dashboard/chat/conn-${connection.id}`}>
-                <Button variant="outline" size="sm">
-                  Chat
-                </Button>
-              </Link>
+              <Button variant="outline" size="sm" onClick={() => handleStartChat(connection.id)}>
+                Chat
+              </Button>
               <div className="flex space-x-2">
                 <Button variant="outline" size="sm">
                   <Edit className="h-4 w-4" />
