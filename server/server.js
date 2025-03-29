@@ -545,6 +545,71 @@ app.delete("/api/connections/:connectionId", verifyToken, async (req, res) => {
   }
 });
 
+// GET /api/profile endpoint to fetch user profile details
+app.get('/api/profile', verifyToken, (req, res) => {
+  const userId = req.user.userId;
+  const query = `
+    SELECT id, name, email, bio, company, 
+           IF(image IS NOT NULL, CONCAT('data:image/jpeg;base64,', TO_BASE64(image)), null) as image
+    FROM users
+    WHERE id = ?
+  `;
+  db.query(query, [userId], (err, results) => {
+    if (err) {
+      console.error('Error fetching profile:', err);
+      return res.status(500).json({ error: 'Error fetching profile.' });
+    }
+    if (results.length === 0) {
+      return res.status(404).json({ error: 'User not found.' });
+    }
+    res.json(results[0]);
+  });
+});
+
+// PUT /api/profile endpoint to update user profile details
+app.put('/api/profile', verifyToken, (req, res) => {
+  const userId = req.user.userId;
+  const { firstName, lastName, email, bio, company, image } = req.body;
+
+  // Validate required fields
+  if (!firstName || !lastName || !email) {
+    return res.status(400).json({ error: 'Missing required fields: firstName, lastName, and email are required.' });
+  }
+
+  // Combine first and last name for the users.name column
+  const name = `${firstName} ${lastName}`;
+
+  // Process the image field:
+  // If an image is provided, remove any data URI prefix and convert to a Buffer.
+  let imageBuffer = null;
+  if (image) {
+    const base64Data = image.includes(',') ? image.split(',')[1] : image;
+    imageBuffer = Buffer.from(base64Data, 'base64');
+  }
+
+  const updateQuery = `
+    UPDATE users
+    SET name = ?,
+        email = ?,
+        bio = ?,
+        company = ?,
+        image = ?
+    WHERE id = ?
+  `;
+
+  db.query(updateQuery, [name, email, bio, company, imageBuffer, userId], (err, result) => {
+    if (err) {
+      console.error('Error updating profile:', err);
+      return res.status(500).json({ error: 'Error updating profile.' });
+    }
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'User not found.' });
+    }
+    res.json({ message: 'Profile updated successfully.' });
+  });
+});
+
+
 // Add new endpoint to save chat session
 app.post('/api/chat-sessions', verifyToken, async (req, res) => {
   const { connectionId, title, messages } = req.body;
