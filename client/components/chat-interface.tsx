@@ -16,6 +16,35 @@ interface Message {
   sql?: string
 }
 
+function transformSchema(rawSchema: any): TableSchema[] {
+  return Object.entries(rawSchema).map(([table_name, table_info]: [string, any]) => {
+    const columns: ColumnSchema[] = (table_info.columns || []).map((column_name: string) => {
+      const constraints: string[] = []
+      if (table_info.primary_key?.includes(column_name)) {
+        constraints.push("PRIMARY KEY")
+      }
+      if (table_info.foreign_keys && table_info.foreign_keys[column_name]) {
+        constraints.push(`FOREIGN KEY (${table_info.foreign_keys[column_name]})`)
+      }
+      return {
+        column_name,
+        data_type: "VARCHAR", // Default type if not provided
+        constraints,
+      }
+    })
+    const foreignKeys: string[] = table_info.foreign_keys
+      ? Object.entries(table_info.foreign_keys).map(([key, value]) => `${key} -> ${value}`)
+      : []
+
+    return {
+      table_name,
+      columns,
+      primary_key: table_info.primary_key || [],
+      foreign_keys: foreignKeys,
+    }
+  })
+}
+
 interface ColumnSchema {
   column_name: string
   data_type: string
@@ -41,19 +70,210 @@ interface ServerSchema {
   }
 }
 
-interface ChatInterfaceProps {
-  connectionId?: string
+interface ChatSession {
+  id: string
+  title: string
+  connectionName: string
+  firstQuery: string
+  messageCount: number
+  createdAt: string
+  updatedAt: string
 }
 
-export function ChatInterface({ connectionId }: ChatInterfaceProps) {
+interface UserSettings {
+  theme: 'light' | 'dark' | 'system'
+  query_timeout: number
+  show_sql_queries: boolean
+}
+
+interface ChatInterfaceProps {
+  connectionId?: string
+  sessionId?: string
+}
+
+export function ChatInterface({ connectionId, sessionId }: ChatInterfaceProps) {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [schema, setSchema] = useState<TableSchema[]>([])
   const [isSchemaLoading, setIsSchemaLoading] = useState(false)
+  const [chatSessions, setChatSessions] = useState<ChatSession[]>([])
+  const [settings, setSettings] = useState<UserSettings | null>(null)
   const { toast } = useToast()
   const chatContainerRef = useRef<HTMLDivElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  // Load existing chat session if sessionId is provided
+  useEffect(() => {
+    if (sessionId) {
+      loadChatSession(sessionId)
+    } else if (connectionId && connectionId !== "new") {
+      loadConnectionChats(connectionId)
+    }
+  }, [sessionId, connectionId])
+
+  // Load user settings
+  useEffect(() => {
+    loadUserSettings()
+  }, [])
+
+  const loadChatSession = async (sessionId: string) => {
+    try {
+      const token = localStorage.getItem("auth_token")
+      if (!token) {
+        toast({
+          title: "Error",
+          description: "Please log in to continue.",
+          variant: "destructive",
+        })
+        return
+      }
+  
+
+      const response = await fetch(`http://localhost:3001/api/chat-sessions/${sessionId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+  
+      const data = await response.json()
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to load chat session")
+      }
+  
+      // Transform raw messages into your Message interface format
+      const transformedMessages = data.messages
+        .map((msg: any) => ({
+          id: msg.id,
+          role: msg.role,
+          content: msg.content,
+          timestamp: new Date(msg.created_at),
+          sql: msg.sql_query || undefined,
+        }))
+        .sort((a: Message, b: Message) => a.timestamp.getTime() - b.timestamp.getTime())
+  
+      setMessages(transformedMessages)
+  
+      // Use the connectionId prop if available; otherwise, use the one from session data.
+      const targetConnectionId = data.connectionId;
+      console.log("this is connection id",data.connectionId)
+      if (!targetConnectionId) {
+        throw new Error("No valid connection ID available to fetch schema")
+      }
+  
+      const schemaKey = `schema_${targetConnectionId}`;
+      const storedSchema = localStorage.getItem(schemaKey);
+      
+      if (!storedSchema) {
+        setIsSchemaLoading(true)
+        try {
+          const schemaResponse = await fetch(`http://localhost:3001/api/schema/${targetConnectionId}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          })
+  
+          const schemaData = await schemaResponse.json()
+          if (!schemaResponse.ok) {
+            throw new Error(schemaData.error || "Failed to fetch schema")
+          }
+          if (!schemaData.schema) {
+            throw new Error("Invalid schema format received from server")
+          }
+  
+          const transformedSchema = transformSchema(schemaData.schema)
+          setSchema(transformedSchema)
+          localStorage.setItem(schemaKey, JSON.stringify(transformedSchema))
+        } catch (schemaError) {
+          console.error("Error fetching schema:", schemaError)
+          toast({
+            title: "Error",
+            description: schemaError instanceof Error ? schemaError.message : "Failed to fetch schema",
+            variant: "destructive",
+          })
+          setSchema([])
+        } finally {
+          setIsSchemaLoading(false)
+        }
+      } else {
+        try {
+          const parsedSchema = JSON.parse(storedSchema)
+          setSchema(Array.isArray(parsedSchema) ? parsedSchema : [])
+        } catch (e) {
+          console.error("Error parsing stored schema:", e)
+          setSchema([])
+        }
+      }
+    } catch (error) {
+      console.error("Error loading chat session:", error)
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to load chat session",
+        variant: "destructive",
+      })
+    }
+  }
+  
+
+  const loadConnectionChats = async (connectionId: string) => {
+    try {
+      const token = localStorage.getItem("auth_token")
+      if (!token) {
+        toast({
+          title: "Error",
+          description: "Please log in to continue.",
+          variant: "destructive",
+        })
+        return
+      }
+    
+      const response = await fetch(`http://localhost:3001/api/chat-sessions/connection/${connectionId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to load chat sessions")
+      }
+
+      // Transform and store chat sessions
+      const transformedSessions = data.sessions.map((session: any) => ({
+        id: session.id,
+        title: session.title,
+        connectionName: session.connection_name,
+        firstQuery: session.first_query,
+        messageCount: session.message_count,
+        createdAt: session.created_at,
+        updatedAt: session.updated_at
+      }))
+
+      setChatSessions(transformedSessions)
+
+      // If there are chat sessions and no specific session is loaded,
+      // load the most recent one
+      if (transformedSessions.length > 0 && !sessionId) {
+        loadChatSession(transformedSessions[0].id)
+        // Update URL with session ID
+        window.history.pushState({}, '', `/dashboard/chat/${transformedSessions[0].id}`)
+      } else {
+        // If no sessions exist, initialize with system message
+        setMessages([
+          {
+            id: "1",
+            role: "system",
+            content: "Connected to your database. Ask me anything about your data!",
+            timestamp: new Date(),
+          },
+        ])
+      }
+    } catch (error) {
+      console.error("Error loading connection chats:", error)
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to load chat sessions",
+        variant: "destructive",
+      })
+    }
+  }
 
   // Scroll to bottom effect
   const scrollToBottom = () => {
@@ -96,6 +316,40 @@ export function ChatInterface({ connectionId }: ChatInterfaceProps) {
     }
   }, [connectionId, messages.length])
 
+  const loadUserSettings = async () => {
+    try {
+      const token = localStorage.getItem("auth_token")
+      if (!token) {
+        toast({
+          title: "Error",
+          description: "Please log in to continue.",
+          variant: "destructive",
+        })
+        return
+      }
+
+      const response = await fetch('http://localhost:3001/api/settings', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      const data = await response.json()
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to load settings')
+      }
+
+      setSettings(data)
+    } catch (error) {
+      console.error('Error loading settings:', error)
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to load settings",
+        variant: "destructive",
+      })
+    }
+  }
+
   // If no connectionId is provided, show a message to select a connection
   if (!connectionId) {
     return (
@@ -122,6 +376,7 @@ export function ChatInterface({ connectionId }: ChatInterfaceProps) {
       timestamp: new Date(),
     }
 
+    // Add user message immediately for better UX
     setMessages((prev) => [...prev, userMessage])
     setInput("")
     setIsLoading(true)
@@ -137,6 +392,11 @@ export function ChatInterface({ connectionId }: ChatInterfaceProps) {
         return
       }
 
+      // Get current session ID from URL if it exists
+      const urlParts = window.location.pathname.split('/')
+      const currentSessionId = urlParts[urlParts.length - 1]
+      const isValidSessionId = currentSessionId && currentSessionId !== 'new' && currentSessionId !== connectionId
+
       const response = await fetch("http://localhost:3001/api/chat", {
         method: "POST",
         headers: {
@@ -146,11 +406,15 @@ export function ChatInterface({ connectionId }: ChatInterfaceProps) {
         body: JSON.stringify({
           connectionId,
           query: input,
+          sessionId: isValidSessionId ? currentSessionId : undefined,
+          settings: {
+            query_timeout: settings?.query_timeout || 30,
+            show_sql_queries: settings?.show_sql_queries ?? true
+          }
         }),
       })
 
       const data = await response.json()
-      console.log("Fetched schema data:", data)
       if (!response.ok) {
         throw new Error(data.error || "Failed to get response")
       }
@@ -158,14 +422,17 @@ export function ChatInterface({ connectionId }: ChatInterfaceProps) {
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
-        content:
-          data.error ||
-          data.explanation ||
-          "Sorry, I couldn't process your request.",
-        timestamp: new Date(),
+        content: data.explanation || "Sorry, I couldn't process your request.",
+        timestamp: new Date(Date.now() + 1000), // Add 1 second to ensure correct ordering
+        sql: settings?.show_sql_queries ? data.sql_query : undefined
       }
 
       setMessages((prev) => [...prev, assistantMessage])
+
+      // If this is a new chat session, update the URL with the session ID
+      if (data.sessionId && !isValidSessionId) {
+        window.history.pushState({}, '', `/dashboard/chat/${data.sessionId}`)
+      }
     } catch (error) {
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
@@ -174,7 +441,8 @@ export function ChatInterface({ connectionId }: ChatInterfaceProps) {
           error instanceof Error
             ? error.message
             : "An unexpected error occurred. Please try again.",
-        timestamp: new Date(),
+        timestamp: new Date(Date.now() + 1000), // Add 1 second to ensure correct ordering
+        sql: undefined
       }
       setMessages((prev) => [...prev, errorMessage])
     } finally {
@@ -184,7 +452,7 @@ export function ChatInterface({ connectionId }: ChatInterfaceProps) {
 
   const fetchSchema = async () => {
     if (!connectionId || connectionId === "new") return
-
+    
     setIsSchemaLoading(true)
     try {
       const token = localStorage.getItem("auth_token")
@@ -197,56 +465,174 @@ export function ChatInterface({ connectionId }: ChatInterfaceProps) {
         return
       }
 
-      const response = await fetch(`http://localhost:3001/api/schema/${connectionId}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch schema")
-      }
-
-      // Transform the schema data into the expected format
-      const transformedSchema = Object.entries(data.schema).map(([table_name, table_info]: [string, any]) => {
-        // Transform columns
-        const columns = table_info.columns.map((column_name: string) => {
-          const constraints = []
-          // Add PRIMARY KEY constraint if column is in primary_key array
-          if (table_info.primary_key.includes(column_name)) {
-            constraints.push("PRIMARY KEY")
-          }
-          // Add FOREIGN KEY constraint if column has a foreign key
-          if (table_info.foreign_keys[column_name]) {
-            constraints.push(`FOREIGN KEY (${table_info.foreign_keys[column_name]})`)
-          }
-          return {
-            column_name,
-            data_type: "VARCHAR", // Since the schema doesn't provide data types, we'll use a default
-            constraints
-          }
-        })
-
-        // Transform foreign keys into array of strings
-        const foreignKeys = Object.entries(table_info.foreign_keys).map(([key, value]) => `${key} -> ${value}`)
-
-        return {
-          table_name,
-          columns,
-          primary_key: table_info.primary_key,
-          foreign_keys: foreignKeys
+      // Get current session ID from URL if it exists
+      const urlParts = window.location.pathname.split('/')
+      const currentSessionId = urlParts[urlParts.length - 1]
+      const isValidSessionId = currentSessionId !== connectionId
+      var cleanid =''
+      if (isValidSessionId) {
+        console.log(currentSessionId)
+        if (currentSessionId.startsWith("sess-")) {
+            cleanid = currentSessionId.replace("sess-", "");
         }
-      })
+        const sessionResponse = await fetch(`http://localhost:3001/api/chat-sessions/${cleanid}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        })
+       
+        const sessionData = await sessionResponse.json()
+        if (!sessionResponse.ok) {
+          throw new Error(sessionData.error || "Failed to load session")
+        }
+        // Use the connection ID from the session
+        const targetConnectionId = sessionData.connectionId
+        const controller = new AbortController()
+        const timeout = setTimeout(() => controller.abort(), 60000) // 60 second timeout
+        try {
+          const schemaResponse = await fetch(`http://localhost:3001/api/schema/${targetConnectionId}`, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+            signal: controller.signal
+          })
 
-      setSchema(transformedSchema)
-      localStorage.setItem(`schema_${connectionId}`, JSON.stringify(transformedSchema))
+          clearTimeout(timeout)
+          const schemaData = await schemaResponse.json()
+        
+          if (!schemaResponse.ok) {
+            if (schemaResponse.status === 404) {
+              throw new Error("Database connection not found. Please check if the connection exists and is accessible.")
+            }
+            throw new Error(schemaData.error || schemaData.details || "Failed to fetch schema")
+          }
+
+          // Transform the schema data into the expected format
+          if (!schemaData.schema) {
+            throw new Error("Invalid schema format received from server")
+          }
+
+          const transformedSchema = Object.entries(schemaData.schema).map(([table_name, table_info]: [string, any]) => {
+            // Transform columns
+            const columns = table_info.columns.map((column_name: string) => {
+              const constraints = []
+              // Add PRIMARY KEY constraint if column is in primary_key array
+              if (table_info.primary_key.includes(column_name)) {
+                constraints.push("PRIMARY KEY")
+              }
+              // Add FOREIGN KEY constraint if column has a foreign key
+              if (table_info.foreign_keys[column_name]) {
+                constraints.push(`FOREIGN KEY (${table_info.foreign_keys[column_name]})`)
+              }
+              return {
+                column_name,
+                data_type: "VARCHAR", // Since the schema doesn't provide data types, we'll use a default
+                constraints
+              }
+            })
+
+            // Transform foreign keys into array of strings
+            const foreignKeys = Object.entries(table_info.foreign_keys).map(([key, value]) => `${key} -> ${value}`)
+
+            return {
+              table_name,
+              columns,
+              primary_key: table_info.primary_key,
+              foreign_keys: foreignKeys
+            }
+          })
+
+          setSchema(transformedSchema)
+          localStorage.setItem(`schema_${targetConnectionId}`, JSON.stringify(transformedSchema))
+        } catch (error) {
+          if (error instanceof Error) {
+            if (error.name === 'AbortError') {
+              throw new Error('Schema fetch timed out. The database might be slow to respond.')
+            }
+            throw error
+          }
+          throw new Error('An unknown error occurred')
+        } finally {
+          clearTimeout(timeout)
+        }
+      } else {
+        // Use the provided connection ID directly
+        const controller = new AbortController()
+        const timeout = setTimeout(() => controller.abort(), 30000) // 30 second timeout
+        try {
+          const response = await fetch(`http://localhost:3001/api/schema/${connectionId}`, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+            signal: controller.signal
+          })
+
+          clearTimeout(timeout)
+          const data = await response.json()
+
+          if (!response.ok) {
+            if (response.status === 404) {
+              throw new Error("Database connection not found. Please check if the connection exists and is accessible.")
+            }
+            throw new Error(data.error || data.details || "Failed to fetch schema")
+          }
+
+          // Transform the schema data into the expected format
+          if (!data.schema) {
+            throw new Error("Invalid schema format received from server")
+          }
+
+          const transformedSchema = Object.entries(data.schema).map(([table_name, table_info]: [string, any]) => {
+            // Transform columns
+            const columns = table_info.columns.map((column_name: string) => {
+              const constraints = []
+              // Add PRIMARY KEY constraint if column is in primary_key array
+              if (table_info.primary_key.includes(column_name)) {
+                constraints.push("PRIMARY KEY")
+              }
+              // Add FOREIGN KEY constraint if column has a foreign key
+              if (table_info.foreign_keys[column_name]) {
+                constraints.push(`FOREIGN KEY (${table_info.foreign_keys[column_name]})`)
+              }
+              return {
+                column_name,
+                data_type: "VARCHAR", // Since the schema doesn't provide data types, we'll use a default
+                constraints
+              }
+            })
+
+            // Transform foreign keys into array of strings
+            const foreignKeys = Object.entries(table_info.foreign_keys).map(([key, value]) => `${key} -> ${value}`)
+
+            return {
+              table_name,
+              columns,
+              primary_key: table_info.primary_key,
+              foreign_keys: foreignKeys
+            }
+          })
+
+          setSchema(transformedSchema)
+          localStorage.setItem(`schema_${connectionId}`, JSON.stringify(transformedSchema))
+        } catch (error) {
+          if (error instanceof Error) {
+            if (error.name === 'AbortError') {
+              throw new Error('Schema fetch timed out. The database might be slow to respond.')
+            }
+            throw error
+          }
+          throw new Error('An unknown error occurred')
+        } finally {
+          clearTimeout(timeout)
+        }
+      }
     } catch (error) {
       console.error("Schema fetch error:", error)
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to fetch schema",
+        description: error instanceof Error 
+          ? error.message 
+          : "Failed to fetch schema. Please try again or check your database connection.",
         variant: "destructive",
       })
       setSchema([])
@@ -326,6 +712,7 @@ export function ChatInterface({ connectionId }: ChatInterfaceProps) {
           <TabsList className="w-full sm:w-auto">
             <TabsTrigger value="chat">Chat</TabsTrigger>
             <TabsTrigger value="schema">Schema</TabsTrigger>
+            <TabsTrigger value="history">History</TabsTrigger>
           </TabsList>
           <Button 
             variant="outline" 
@@ -337,6 +724,50 @@ export function ChatInterface({ connectionId }: ChatInterfaceProps) {
             Save Chat
           </Button>
         </div>
+
+        {/* ---------- CHAT HISTORY TAB ---------- */}
+        <TabsContent value="history" className="h-full">
+          <Card className="h-full overflow-hidden">
+            <CardHeader className="p-3 sm:p-4 border-b">
+              <CardTitle className="text-base sm:text-lg">Chat History</CardTitle>
+            </CardHeader>
+            <CardContent className="p-3 sm:p-4 overflow-auto">
+              {chatSessions.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No chat history found.</p>
+              ) : (
+                <div className="space-y-4">
+                  {chatSessions.map((session) => (
+                    <Card key={session.id} className="cursor-pointer hover:bg-muted/50" onClick={() => {
+                      loadChatSession(session.id)
+                      window.history.pushState({}, '', `/dashboard/chat/${session.id}`)
+                    }}>
+                      <CardHeader className="p-4">
+                        <div className="flex items-center justify-between">
+                          <CardTitle className="text-lg font-medium">{session.title}</CardTitle>
+                          <span className="text-xs text-muted-foreground">
+                            {new Date(session.updatedAt).toLocaleDateString()}
+                          </span>
+                        </div>
+                        <p className="text-sm text-muted-foreground flex items-center mt-1">
+                          <Database className="h-3 w-3 mr-1" />
+                          {session.connectionName}
+                        </p>
+                      </CardHeader>
+                      <CardContent className="p-4 pt-0">
+                        <p className="text-sm text-muted-foreground line-clamp-2">
+                          {session.firstQuery}
+                        </p>
+                        <div className="flex items-center mt-2 text-xs text-muted-foreground">
+                          <span>{session.messageCount} messages</span>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         {/* ---------- CHAT TAB ---------- */}
         <TabsContent value="chat" className="flex-1 flex flex-col">
@@ -371,7 +802,7 @@ export function ChatInterface({ connectionId }: ChatInterfaceProps) {
                       }`}
                     >
                       <p className="text-sm sm:text-base">{message.content}</p>
-                      {message.sql && (
+                      {message.sql && settings?.show_sql_queries && (
                         <div className="mt-2 pt-2 border-t dark:border-border text-xs sm:text-sm">
                           <p className="font-mono text-xs opacity-80">SQL Query:</p>
                           <pre className="bg-muted p-2 rounded-md mt-1 overflow-x-auto text-xs">

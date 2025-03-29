@@ -155,7 +155,8 @@ export default function ConnectionsPage() {
               </div>
             </CardContent>
             <CardFooter className="flex justify-between pt-3">
-              <Link href={`/dashboard/chat/${connection.id}`}>
+              {/* Prefix the connection id with "conn-" so ChatPage can distinguish it */}
+              <Link href={`/dashboard/chat/conn-${connection.id}`}>
                 <Button variant="outline" size="sm">
                   Chat
                 </Button>

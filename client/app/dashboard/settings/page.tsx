@@ -1,3 +1,6 @@
+"use client"
+
+import { useEffect, useState } from "react"
 import { DashboardHeader } from "@/components/dashboard-header"
 import { DashboardShell } from "@/components/dashboard-shell"
 import { Button } from "@/components/ui/button"
@@ -8,8 +11,129 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { useToast } from "@/components/ui/use-toast"
+import { Sun, Moon, Monitor } from "lucide-react"
+
+interface UserSettings {
+  theme: 'light' | 'dark' | 'system'
+  query_timeout: number
+  auto_disconnect: boolean
+  show_sql_queries: boolean
+}
 
 export default function SettingsPage() {
+  const [isLoading, setIsLoading] = useState(false)
+  const [settings, setSettings] = useState<UserSettings | null>(null)
+  const { toast } = useToast()
+
+  useEffect(() => {
+    loadSettings()
+  }, [])
+
+  // Effect to sync theme changes with localStorage
+  useEffect(() => {
+    if (settings?.theme) {
+      localStorage.setItem('theme', settings.theme)
+      // Update document class for theme
+      if (settings.theme === 'system') {
+        const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+        document.documentElement.classList.remove('light', 'dark')
+        document.documentElement.classList.add(systemTheme)
+      } else {
+        document.documentElement.classList.remove('light', 'dark')
+        document.documentElement.classList.add(settings.theme)
+      }
+    }
+  }, [settings?.theme])
+
+  const loadSettings = async () => {
+    try {
+      const token = localStorage.getItem("auth_token")
+      if (!token) {
+        toast({
+          title: "Error",
+          description: "Please log in to continue.",
+          variant: "destructive",
+        })
+        return
+      }
+
+      const response = await fetch('http://localhost:3001/api/settings', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      const data = await response.json()
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to load settings')
+      }
+
+      // If no theme in settings, use the one from localStorage
+      const currentTheme = localStorage.getItem('theme') as UserSettings['theme']
+      const settingsWithTheme = {
+        ...data,
+        theme: currentTheme || data.theme || 'system'
+      }
+
+      setSettings(settingsWithTheme)
+    } catch (error) {
+      console.error('Error loading settings:', error)
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to load settings",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const saveSettings = async (newSettings: Partial<UserSettings>) => {
+    setIsLoading(true)
+    try {
+      const token = localStorage.getItem("auth_token")
+      if (!token) {
+        toast({
+          title: "Error",
+          description: "Please log in to continue.",
+          variant: "destructive",
+        })
+        return
+      }
+
+      const response = await fetch('http://localhost:3001/api/settings', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          ...settings,
+          ...newSettings,
+        }),
+      })
+
+      const data = await response.json()
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to save settings')
+      }
+
+      setSettings(prev => ({ ...prev!, ...newSettings }))
+      toast({
+        title: "Success",
+        description: "Settings saved successfully.",
+      })
+    } catch (error) {
+      console.error('Error saving settings:', error)
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to save settings",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   return (
     <DashboardShell>
       <DashboardHeader heading="Settings" text="Manage your application preferences and account settings." />
@@ -61,9 +185,6 @@ export default function SettingsPage() {
                   </Select>
                 </div>
               </CardContent>
-              <CardFooter>
-                <Button>Save Changes</Button>
-              </CardFooter>
             </Card>
 
             <Card>
@@ -77,7 +198,13 @@ export default function SettingsPage() {
                     <Label htmlFor="timeout">Query Timeout</Label>
                     <p className="text-sm text-muted-foreground">Maximum time in seconds for a query to execute</p>
                   </div>
-                  <Input id="timeout" type="number" defaultValue="30" className="w-20" />
+                  <Input 
+                    id="timeout" 
+                    type="number" 
+                    value={settings?.query_timeout || 30} 
+                    onChange={(e) => saveSettings({ query_timeout: parseInt(e.target.value) })}
+                    className="w-20" 
+                  />
                 </div>
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
@@ -86,19 +213,22 @@ export default function SettingsPage() {
                       Automatically disconnect from databases after inactivity
                     </p>
                   </div>
-                  <Switch defaultChecked />
+                  <Switch 
+                    checked={settings?.auto_disconnect} 
+                    onCheckedChange={(checked) => saveSettings({ auto_disconnect: checked })}
+                  />
                 </div>
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
                     <Label>Show SQL Queries</Label>
                     <p className="text-sm text-muted-foreground">Display the generated SQL queries in chat responses</p>
                   </div>
-                  <Switch defaultChecked />
+                  <Switch 
+                    checked={settings?.show_sql_queries} 
+                    onCheckedChange={(checked) => saveSettings({ show_sql_queries: checked })}
+                  />
                 </div>
               </CardContent>
-              <CardFooter>
-                <Button>Save Changes</Button>
-              </CardFooter>
             </Card>
           </div>
         </TabsContent>
@@ -106,39 +236,23 @@ export default function SettingsPage() {
         <TabsContent value="appearance">
           <Card>
             <CardHeader>
-              <CardTitle>Appearance</CardTitle>
-              <CardDescription>Customize the look and feel of the application.</CardDescription>
+              <CardTitle>Theme</CardTitle>
+              <CardDescription>Choose your preferred theme for the application.</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent>
               <div className="space-y-2">
-                <Label>Theme</Label>
-                <RadioGroup defaultValue="system" className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <RadioGroup 
+                  value={settings?.theme || "system"} 
+                  onValueChange={(value) => saveSettings({ theme: value as UserSettings['theme'] })}
+                  className="grid grid-cols-1 sm:grid-cols-3 gap-4"
+                >
                   <div>
                     <RadioGroupItem value="light" id="theme-light" className="peer sr-only" />
                     <Label
                       htmlFor="theme-light"
                       className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary"
                     >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        className="mb-3 h-6 w-6"
-                      >
-                        <circle cx="12" cy="12" r="4" />
-                        <path d="M12 2v2" />
-                        <path d="M12 20v2" />
-                        <path d="m4.93 4.93 1.41 1.41" />
-                        <path d="m17.66 17.66 1.41 1.41" />
-                        <path d="M2 12h2" />
-                        <path d="M20 12h2" />
-                        <path d="m6.34 17.66-1.41 1.41" />
-                        <path d="m19.07 4.93-1.41 1.41" />
-                      </svg>
+                      <Sun className="mb-3 h-6 w-6" />
                       Light
                     </Label>
                   </div>
@@ -148,18 +262,7 @@ export default function SettingsPage() {
                       htmlFor="theme-dark"
                       className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary"
                     >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        className="mb-3 h-6 w-6"
-                      >
-                        <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
-                      </svg>
+                      <Moon className="mb-3 h-6 w-6" />
                       Dark
                     </Label>
                   </div>
@@ -169,62 +272,13 @@ export default function SettingsPage() {
                       htmlFor="theme-system"
                       className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary"
                     >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        className="mb-3 h-6 w-6"
-                      >
-                        <rect width="20" height="14" x="2" y="3" rx="2" />
-                        <line x1="8" x2="16" y1="21" y2="21" />
-                        <line x1="12" x2="12" y1="17" y2="21" />
-                      </svg>
+                      <Monitor className="mb-3 h-6 w-6" />
                       System
                     </Label>
                   </div>
                 </RadioGroup>
               </div>
-
-              <div className="space-y-2">
-                <Label>Font Size</Label>
-                <RadioGroup defaultValue="medium" className="grid grid-cols-3 gap-4">
-                  <div>
-                    <RadioGroupItem value="small" id="font-small" className="peer sr-only" />
-                    <Label
-                      htmlFor="font-small"
-                      className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary"
-                    >
-                      Small
-                    </Label>
-                  </div>
-                  <div>
-                    <RadioGroupItem value="medium" id="font-medium" className="peer sr-only" />
-                    <Label
-                      htmlFor="font-medium"
-                      className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary"
-                    >
-                      Medium
-                    </Label>
-                  </div>
-                  <div>
-                    <RadioGroupItem value="large" id="font-large" className="peer sr-only" />
-                    <Label
-                      htmlFor="font-large"
-                      className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary"
-                    >
-                      Large
-                    </Label>
-                  </div>
-                </RadioGroup>
-              </div>
             </CardContent>
-            <CardFooter>
-              <Button>Save Changes</Button>
-            </CardFooter>
           </Card>
         </TabsContent>
 
@@ -266,9 +320,6 @@ export default function SettingsPage() {
                 <Switch defaultChecked />
               </div>
             </CardContent>
-            <CardFooter>
-              <Button>Save Changes</Button>
-            </CardFooter>
           </Card>
         </TabsContent>
 
@@ -314,8 +365,8 @@ export default function SettingsPage() {
                 </div>
               </div>
             </CardContent>
-            <CardFooter className="flex flex-col items-start">
-              <p className="text-sm text-muted-foreground mb-4">
+            <CardFooter className="flex flex-col items-start gap-4">
+              <p className="text-sm text-muted-foreground">
                 Your API key provides full access to your account. Keep it secure and never share it publicly.
               </p>
               <Button variant="outline">View API Documentation</Button>

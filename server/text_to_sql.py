@@ -59,7 +59,7 @@ class QueryValidator(BaseComponent):
             "Query:\n"
             f"{query}\n"
         )
-        model = genai.GenerativeModel("gemini-1.5-flash")
+        model = genai.GenerativeModel("gemini-2.0-flash-lite-001")
         response = model.generate_content(prompt)
         answer = response.text.strip().lower()
         is_valid = "true" in answer
@@ -84,7 +84,7 @@ class GeminiSQLGenerator(BaseComponent):
             f"{query}\n\n"
             "Generate the corresponding SQL query:"
         )
-        model = genai.GenerativeModel("gemini-1.5-flash")
+        model = genai.GenerativeModel("gemini-2.0-flash-lite-001")
         response = model.generate_content(system_prompt)
         sql_query = response.text.strip()
         sql_query = remove_markdown_code_fence(sql_query)
@@ -114,7 +114,7 @@ class QueryVerifier(BaseComponent):
                 "SQL Query:\n"
                 f"{sql_query}\n"
             )
-            model = genai.GenerativeModel("gemini-1.5-flash")
+            model = genai.GenerativeModel("gemini-2.0-flash-lite-001")
             response = model.generate_content(prompt)
             answer = response.text.strip().lower()
             if "false" in answer:
@@ -186,6 +186,11 @@ def execute_sql_query(db_url: str, sql_query: str):
         columns = list(result.keys())
     return columns, data
 
+def safe_decode(obj):
+    if isinstance(obj, bytes):
+        return obj.decode('utf-8', errors='replace')
+    return obj
+
 def generate_natural_language_response(user_query: str, columns, data):
     prompt = (
         "You are an expert data interpreter. Based on the following query results, provide a clear and detailed summary in bullet points. "
@@ -195,9 +200,11 @@ def generate_natural_language_response(user_query: str, columns, data):
         "User Request: " + user_query + "\n\n"
         "Provide your summary in a bullet point list format:"
     )
-    model = genai.GenerativeModel("gemini-1.5-flash")
+    model = genai.GenerativeModel("gemini-2.0-flash-lite-001")
     response = model.generate_content(prompt)
-    return response.text.strip()
+    # Ensure that response.text is a valid string:
+    response_text = safe_decode(response.text).strip()
+    return response_text
 
 # ---------- FastAPI Setup ----------
 

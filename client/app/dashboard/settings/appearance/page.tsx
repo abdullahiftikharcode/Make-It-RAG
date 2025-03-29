@@ -1,3 +1,6 @@
+"use client"
+
+import { useEffect, useState } from "react"
 import { DashboardHeader } from "@/components/dashboard-header"
 import { DashboardShell } from "@/components/dashboard-shell"
 import { Button } from "@/components/ui/button"
@@ -6,8 +9,128 @@ import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Separator } from "@/components/ui/separator"
 import { Sun, Moon, Monitor } from "lucide-react"
+import { useToast } from "@/components/ui/use-toast"
+
+interface UserSettings {
+  theme: 'light' | 'dark' | 'system'
+  query_timeout: number
+  auto_disconnect: boolean
+  show_sql_queries: boolean
+}
 
 export default function AppearanceSettingsPage() {
+  const [isLoading, setIsLoading] = useState(false)
+  const [settings, setSettings] = useState<UserSettings | null>(null)
+  const { toast } = useToast()
+
+  useEffect(() => {
+    loadSettings()
+  }, [])
+
+  // Effect to sync theme changes with localStorage
+  useEffect(() => {
+    if (settings?.theme) {
+      localStorage.setItem('theme', settings.theme)
+      // Update document class for theme
+      if (settings.theme === 'system') {
+        const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+        document.documentElement.classList.remove('light', 'dark')
+        document.documentElement.classList.add(systemTheme)
+      } else {
+        document.documentElement.classList.remove('light', 'dark')
+        document.documentElement.classList.add(settings.theme)
+      }
+    }
+  }, [settings?.theme])
+
+  const loadSettings = async () => {
+    try {
+      const token = localStorage.getItem("auth_token")
+      if (!token) {
+        toast({
+          title: "Error",
+          description: "Please log in to continue.",
+          variant: "destructive",
+        })
+        return
+      }
+
+      const response = await fetch('http://localhost:3001/api/settings', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      const data = await response.json()
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to load settings')
+      }
+
+      // If no theme in settings, use the one from localStorage
+      const currentTheme = localStorage.getItem('theme') as UserSettings['theme']
+      const settingsWithTheme = {
+        ...data,
+        theme: currentTheme || data.theme || 'system'
+      }
+
+      setSettings(settingsWithTheme)
+    } catch (error) {
+      console.error('Error loading settings:', error)
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to load settings",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const saveSettings = async (newSettings: Partial<UserSettings>) => {
+    setIsLoading(true)
+    try {
+      const token = localStorage.getItem("auth_token")
+      if (!token) {
+        toast({
+          title: "Error",
+          description: "Please log in to continue.",
+          variant: "destructive",
+        })
+        return
+      }
+
+      const response = await fetch('http://localhost:3001/api/settings', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          ...settings,
+          ...newSettings,
+        }),
+      })
+
+      const data = await response.json()
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to save settings')
+      }
+
+      setSettings(prev => ({ ...prev!, ...newSettings }))
+      toast({
+        title: "Success",
+        description: "Settings saved successfully.",
+      })
+    } catch (error) {
+      console.error('Error saving settings:', error)
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to save settings",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   return (
     <DashboardShell>
       <DashboardHeader heading="Appearance Settings" text="Customize the look and feel of your application." />
@@ -18,9 +141,13 @@ export default function AppearanceSettingsPage() {
             <CardTitle>Theme</CardTitle>
             <CardDescription>Choose your preferred theme for the application.</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6">
+          <CardContent>
             <div className="space-y-2">
-              <RadioGroup defaultValue="system" className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <RadioGroup 
+                value={settings?.theme || "system"} 
+                onValueChange={(value) => saveSettings({ theme: value as UserSettings['theme'] })}
+                className="grid grid-cols-1 sm:grid-cols-3 gap-4"
+              >
                 <div>
                   <RadioGroupItem value="light" id="theme-light" className="peer sr-only" />
                   <Label
@@ -57,91 +184,52 @@ export default function AppearanceSettingsPage() {
               </RadioGroup>
             </div>
           </CardContent>
-          <CardFooter>
-            <Button>Save Preferences</Button>
-          </CardFooter>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>Font Size</CardTitle>
-            <CardDescription>Adjust the font size for better readability.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <RadioGroup defaultValue="medium" className="grid grid-cols-3 gap-4">
-              <div>
-                <RadioGroupItem value="small" id="font-small" className="peer sr-only" />
-                <Label
-                  htmlFor="font-small"
-                  className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary"
-                >
-                  <span className="text-sm">Small</span>
-                </Label>
-              </div>
-              <div>
-                <RadioGroupItem value="medium" id="font-medium" className="peer sr-only" />
-                <Label
-                  htmlFor="font-medium"
-                  className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary"
-                >
-                  <span className="text-base">Medium</span>
-                </Label>
-              </div>
-              <div>
-                <RadioGroupItem value="large" id="font-large" className="peer sr-only" />
-                <Label
-                  htmlFor="font-large"
-                  className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary"
-                >
-                  <span className="text-lg">Large</span>
-                </Label>
-              </div>
-            </RadioGroup>
-          </CardContent>
-          <CardFooter>
-            <Button>Save Preferences</Button>
-          </CardFooter>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Animations</CardTitle>
-            <CardDescription>Configure animation preferences.</CardDescription>
+            <CardTitle>Database Settings</CardTitle>
+            <CardDescription>Configure how the application interacts with your databases.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
-                <Label>Reduce Motion</Label>
-                <p className="text-sm text-muted-foreground">Minimize animations for accessibility purposes</p>
+                <Label>Show SQL Queries</Label>
+                <p className="text-sm text-muted-foreground">Display the generated SQL queries in chat responses</p>
               </div>
-              <div className="flex items-center space-x-2">
-                <Label htmlFor="reduce-motion-off">Off</Label>
-                <RadioGroup defaultValue="off" className="flex">
-                  <RadioGroupItem value="off" id="reduce-motion-off" />
-                  <RadioGroupItem value="on" id="reduce-motion-on" />
-                </RadioGroup>
-                <Label htmlFor="reduce-motion-on">On</Label>
-              </div>
+              <RadioGroup 
+                value={settings?.show_sql_queries ? "on" : "off"}
+                onValueChange={(value) => saveSettings({ show_sql_queries: value === "on" })}
+                className="flex"
+              >
+                <div className="flex items-center space-x-2">
+                  <Label htmlFor="sql-queries-off">Off</Label>
+                  <RadioGroupItem value="off" id="sql-queries-off" />
+                  <RadioGroupItem value="on" id="sql-queries-on" />
+                  <Label htmlFor="sql-queries-on">On</Label>
+                </div>
+              </RadioGroup>
             </div>
             <Separator />
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
-                <Label>Theme Transitions</Label>
-                <p className="text-sm text-muted-foreground">Smooth transitions when changing themes</p>
+                <Label>Auto-disconnect</Label>
+                <p className="text-sm text-muted-foreground">Automatically disconnect from databases after inactivity</p>
               </div>
-              <div className="flex items-center space-x-2">
-                <Label htmlFor="theme-transitions-off">Off</Label>
-                <RadioGroup defaultValue="on" className="flex">
-                  <RadioGroupItem value="off" id="theme-transitions-off" />
-                  <RadioGroupItem value="on" id="theme-transitions-on" />
-                </RadioGroup>
-                <Label htmlFor="theme-transitions-on">On</Label>
-              </div>
+              <RadioGroup 
+                value={settings?.auto_disconnect ? "on" : "off"}
+                onValueChange={(value) => saveSettings({ auto_disconnect: value === "on" })}
+                className="flex"
+              >
+                <div className="flex items-center space-x-2">
+                  <Label htmlFor="auto-disconnect-off">Off</Label>
+                  <RadioGroupItem value="off" id="auto-disconnect-off" />
+                  <RadioGroupItem value="on" id="auto-disconnect-on" />
+                  <Label htmlFor="auto-disconnect-on">On</Label>
+                </div>
+              </RadioGroup>
             </div>
           </CardContent>
-          <CardFooter>
-            <Button>Save Preferences</Button>
-          </CardFooter>
         </Card>
       </div>
     </DashboardShell>

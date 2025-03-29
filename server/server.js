@@ -232,7 +232,7 @@ app.post('/login', (req, res) => {
 
 // Chat endpoint
 app.post('/api/chat', verifyToken, async (req, res) => {
-  const { connectionId, query } = req.body;
+  const { connectionId, query, sessionId, settings } = req.body;
   const userId = req.user.userId;
 
   if (!connectionId || !query) {
@@ -263,7 +263,10 @@ app.post('/api/chat', verifyToken, async (req, res) => {
       const pythonRequest = {
         query: query,
         db_url: connection.connection_string,
-        dialect: connection.type.toUpperCase()
+        dialect: connection.type.toUpperCase(),
+        settings: {
+          query_timeout: settings?.query_timeout || 30
+        }
       };
 
       try {
@@ -282,30 +285,118 @@ app.post('/api/chat', verifyToken, async (req, res) => {
           throw new Error(pythonData.error || 'Error from Python server');
         }
 
-        // Return only the explanation from the Python server response
+        // Start a transaction
+        db.beginTransaction(async (err) => {
+          if (err) {
+            return res.status(500).json({ error: 'Error starting transaction' });
+          }
+
+          let currentSessionId = sessionId;
+
+          // If no sessionId provided, create a new session
+          if (!currentSessionId) {
+            currentSessionId = uuidv4();
+            const title = query.length > 50 ? query.substring(0, 47) + "..." : query;
+
+            const sessionQuery = `
+              INSERT INTO chat_sessions 
+              (id, user_id, connection_id, title)
+              VALUES (?, ?, ?, ?)
+            `;
+
+            await new Promise((resolve, reject) => {
+              db.query(sessionQuery, [currentSessionId, userId, connectionId, title], (err) => {
+                if (err) {
+                  reject(err);
+                } else {
+                  resolve();
+                }
+              });
+            });
+          }
+
+          // Insert the user's message first
+          const userMessageId = uuidv4();
+          const userMessageQuery = `
+            INSERT INTO chat_messages 
+            (id, session_id, role, content, sql_query, created_at)
+            VALUES (?, ?, ?, ?, NULL, NOW())
+          `;
+
+          await new Promise((resolve, reject) => {
+            db.query(userMessageQuery, [userMessageId, currentSessionId, 'user', query], (err) => {
+              if (err) {
+                reject(err);
+              } else {
+                resolve();
+              }
+            });
+          });
+
+          // Then insert the assistant's response
+          const assistantMessageId = uuidv4();
+          const assistantMessageQuery = `
+            INSERT INTO chat_messages 
+            (id, session_id, role, content, sql_query, created_at)
+            VALUES (?, ?, ?, ?, ?, NOW() + INTERVAL 1 SECOND)
+          `;
+
+          await new Promise((resolve, reject) => {
+            db.query(
+              assistantMessageQuery,
+              [
+                assistantMessageId,
+                currentSessionId,
+                'assistant',
+                pythonData.explanation,
+                settings?.show_sql_queries ? pythonData.sql_query : null
+              ],
+              (err) => {
+                if (err) {
+                  reject(err);
+                } else {
+                  resolve();
+                }
+              }
+            );
+          });
+
+          // Commit the transaction
+          db.commit((err) => {
+            if (err) {
+              db.rollback(() => {
+                console.error('Error committing transaction:', err);
+                return res.status(500).json({ error: 'Error saving messages' });
+              });
+              return;
+            }
+
+            // Return the response with sessionId
         res.json({
-          explanation: pythonData.explanation
+              explanation: pythonData.explanation,
+              sql_query: settings?.show_sql_queries ? pythonData.sql_query : null,
+              sessionId: currentSessionId
+            });
+          });
         });
 
       } catch (error) {
-        console.error('Error from Python server:', error);
-        res.status(500).json({ error: 'Error processing query' });
+        console.error('Error:', error);
+        res.status(500).json({ error: error.message || 'Error processing query' });
       }
     });
   } catch (error) {
-    console.error('Error in chat endpoint:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('Error:', error);
+    res.status(500).json({ error: error.message || 'Error processing query' });
   }
 });
 
-// Updated /api/schema/:connectionId endpoint remains as is (using db.promise())
+// Updated /api/schema/:connectionId endpoint with better timeout handling
 app.get("/api/schema/:connectionId", verifyToken, async (req, res) => {
   try {
-    console.log("Fetching schema...");
     const { connectionId } = req.params;
-    const userId = req.user.userId; // Corrected from req.user.id
+    const userId = req.user.userId;
 
-    // Use the promise interface of your db connection
     const promiseDb = db.promise();
     const [rows] = await promiseDb.query(
       "SELECT * FROM database_connections WHERE id = ? AND user_id = ?",
@@ -316,11 +407,15 @@ app.get("/api/schema/:connectionId", verifyToken, async (req, res) => {
       return res.status(404).json({ error: "Connection not found" });
     }
 
-    // Assuming your schema uses 'connection_string' and 'type'
     const { connection_string, type } = rows[0];
-    const dialect = type.toUpperCase(); // Modify this if needed
+    const dialect = type.toUpperCase();
 
-    // Forward request to Python FastAPI server
+    try {
+      // Forward request to Python FastAPI server with both db_url and dialect
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 20000); // 20 second timeout
+
+      try {
     const response = await fetch(
       `http://localhost:8000/schema?db_url=${encodeURIComponent(connection_string)}`,
       {
@@ -328,19 +423,56 @@ app.get("/api/schema/:connectionId", verifyToken, async (req, res) => {
         headers: {
           "Content-Type": "application/json",
         },
+            signal: controller.signal
       }
     );
 
+        clearTimeout(timeout);
     const data = await response.json();
 
     if (!response.ok) {
-      throw new Error(data.error || "Failed to get schema");
-    }
+          throw new Error(data.error || "Failed to get schema from Python server");
+        }
+
+        // Update last_used timestamp for the connection
+        await promiseDb.query(
+          "UPDATE database_connections SET last_used = NOW() WHERE id = ?",
+          [connectionId]
+        );
 
     res.json(data);
+      } catch (error) {
+        if (error.name === 'AbortError') {
+          return res.status(504).json({
+            error: "Schema fetch timed out",
+            details: "The database took too long to respond. This might happen if the database is under heavy load or if there are many tables to analyze."
+          });
+        }
+        throw error;
+      } finally {
+        clearTimeout(timeout);
+      }
+    } catch (pythonError) {
+      console.error("Error from Python server:", pythonError);
+      // Check if Python server is not running
+      if (pythonError.name === 'TypeError' && pythonError.message.includes('Failed to fetch')) {
+        return res.status(503).json({ 
+          error: "Database service is not available",
+          details: "The schema service requires the Python FastAPI server to be running on port 8000."
+        });
+      }
+      // Handle other Python server errors
+      return res.status(500).json({
+        error: "Failed to fetch schema",
+        details: pythonError.message || "An error occurred while fetching the database schema."
+      });
+    }
   } catch (error) {
     console.error("Error fetching schema:", error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ 
+      error: "Internal server error",
+      details: "There was an error processing your request. Please try again later."
+    });
   }
 });
 
@@ -507,6 +639,319 @@ app.post('/api/chat-sessions', verifyToken, async (req, res) => {
     });
   } catch (error) {
     console.error('Error in chat session creation:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Add endpoint to fetch a chat session by ID
+app.get('/api/chat-sessions/:sessionId', verifyToken, async (req, res) => {
+  const { sessionId } = req.params;
+  const userId = req.user.userId;
+  try {
+    // Revised query with clearer aliases
+    const sessionQuery = `
+      SELECT 
+        cs.id AS sessionId,
+        cs.title,
+        cs.created_at,
+        cs.updated_at,
+        dc.id AS connectionId,
+        dc.name AS connectionName,
+        dc.connection_string AS connectionString,
+        dc.type AS connectionType
+      FROM chat_sessions cs
+      JOIN database_connections dc ON cs.connection_id = dc.id
+      WHERE cs.id = ? AND cs.user_id = ?
+    `;
+
+    db.query(sessionQuery, [sessionId, userId], async (err, results) => {
+      if (err) {
+        console.error('Error fetching chat session:', err);
+        return res.status(500).json({ error: 'Error fetching chat session' });
+      }
+
+      if (results.length === 0) {
+        return res.status(404).json({ error: 'Chat session not found' });
+      }
+
+      const session = results[0];
+
+      // Fetch all messages for this session
+      const messagesQuery = `
+        SELECT id, role, content, sql_query, created_at
+        FROM chat_messages
+        WHERE session_id = ?
+        ORDER BY created_at ASC, id ASC
+      `;
+
+      db.query(messagesQuery, [sessionId], (err, messages) => {
+        if (err) {
+          console.error('Error fetching messages:', err);
+          return res.status(500).json({ error: 'Error fetching messages' });
+        }
+
+        res.json({
+          sessionId: session.sessionId,
+          title: session.title,
+          connectionId: session.connectionId,
+          connectionName: session.connectionName,
+          connectionString: session.connectionString,
+          connectionType: session.connectionType,
+          createdAt: session.created_at,
+          updatedAt: session.updated_at,
+          messages: messages
+        });
+      });
+    });
+  } catch (error) {
+    console.error('Error in chat session fetch:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Add endpoint to fetch chat sessions for a specific connection
+app.get('/api/chat-sessions/connection/:connectionId', verifyToken, async (req, res) => {
+  const { connectionId } = req.params;
+  const userId = req.user.userId;
+
+  try {
+    // Verify that the connection belongs to the user
+    const connectionQuery = `
+      SELECT id FROM database_connections 
+      WHERE id = ? AND user_id = ? AND is_active = true
+    `;
+
+    db.query(connectionQuery, [connectionId, userId], async (err, results) => {
+      if (err) {
+        console.error('Error verifying connection:', err);
+        return res.status(500).json({ error: 'Error verifying connection' });
+      }
+
+      if (results.length === 0) {
+        return res.status(404).json({ error: 'Connection not found or inactive' });
+      }
+
+      // Fetch all chat sessions for this connection
+      const sessionsQuery = `
+        SELECT 
+          cs.id,
+          cs.title,
+          cs.created_at,
+          cs.updated_at,
+          dc.name as connection_name,
+          (
+            SELECT content 
+            FROM chat_messages 
+            WHERE session_id = cs.id AND role = 'user' 
+            ORDER BY created_at ASC 
+            LIMIT 1
+          ) as first_query,
+          (SELECT COUNT(*) FROM chat_messages WHERE session_id = cs.id) as message_count
+        FROM chat_sessions cs
+        JOIN database_connections dc ON cs.connection_id = dc.id
+        WHERE cs.connection_id = ?
+        ORDER BY cs.updated_at DESC
+      `;
+
+      db.query(sessionsQuery, [connectionId], (err, sessions) => {
+        if (err) {
+          console.error('Error fetching chat sessions:', err);
+          return res.status(500).json({ error: 'Error fetching chat sessions' });
+        }
+
+        res.json({ sessions });
+      });
+    });
+  } catch (error) {
+    console.error('Error in chat sessions fetch:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get all chat sessions for the user
+app.get('/api/chat-sessions', verifyToken, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+
+    // Query to get all chat sessions with connection names and message counts
+    const query = `
+    SELECT 
+      cs.id,
+      cs.title,
+      cs.created_at,
+      cs.updated_at,
+      dc.name as connection_name,
+      (
+        SELECT content 
+        FROM chat_messages 
+        WHERE session_id = cs.id AND role = 'user' 
+        ORDER BY created_at ASC 
+        LIMIT 1
+      ) as first_query,
+      (
+        SELECT COUNT(*) 
+        FROM chat_messages 
+        WHERE session_id = cs.id
+      ) as message_count
+    FROM chat_sessions cs
+    JOIN database_connections dc ON cs.connection_id = dc.id
+    WHERE cs.user_id = ?
+    ORDER BY cs.updated_at DESC
+  `;
+  
+    db.query(query, [userId], (err, sessions) => {
+      if (err) {
+        console.error('Error fetching chat sessions:', err);
+        return res.status(500).json({ error: 'Failed to fetch chat sessions' });
+      }
+      res.json({ sessions });
+    });
+  } catch (error) {
+    console.error('Error fetching chat sessions:', error);
+    res.status(500).json({ error: 'Failed to fetch chat sessions' });
+  }
+});
+
+// Get user settings
+app.get('/api/settings', verifyToken, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const query = `
+      SELECT query_timeout, show_sql_queries, theme
+      FROM user_settings
+      WHERE user_id = ?
+    `;
+
+    db.query(query, [userId], (err, results) => {
+      if (err) {
+        console.error('Error fetching user settings:', err);
+        return res.status(500).json({ error: 'Error fetching user settings' });
+      }
+
+      if (results.length === 0) {
+        return res.status(404).json({ error: 'User settings not found' });
+      }
+
+      res.json(results[0]);
+    });
+  } catch (error) {
+    console.error('Error in settings fetch:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Update user settings
+app.put('/api/settings', verifyToken, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { query_timeout, show_sql_queries, theme } = req.body;
+
+    const query = `
+      UPDATE user_settings
+      SET 
+        query_timeout = ?,
+        show_sql_queries = ?,
+        theme = ?,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE user_id = ?
+    `;
+
+    db.query(
+      query,
+      [query_timeout, show_sql_queries, theme, userId],
+      (err, results) => {
+        if (err) {
+          console.error('Error updating user settings:', err);
+          return res.status(500).json({ error: 'Error updating user settings' });
+        }
+
+        if (results.affectedRows === 0) {
+          return res.status(404).json({ error: 'User settings not found' });
+        }
+
+        res.json({ message: 'Settings updated successfully' });
+      }
+    );
+  } catch (error) {
+    console.error('Error in settings update:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Add endpoint to reconnect to a database
+app.post('/api/connections/:connectionId/reconnect', verifyToken, async (req, res) => {
+  const { connectionId } = req.params;
+  const userId = req.user.userId;
+
+  try {
+    // First verify that the connection belongs to the user
+    const connectionQuery = `
+      SELECT * FROM database_connections 
+      WHERE id = ? AND user_id = ?
+    `;
+
+    db.query(connectionQuery, [connectionId, userId], async (err, results) => {
+      if (err) {
+        console.error('Error verifying connection:', err);
+        return res.status(500).json({ error: 'Error verifying connection' });
+      }
+
+      if (results.length === 0) {
+        return res.status(404).json({ error: 'Connection not found' });
+      }
+
+      const connection = results[0];
+
+      // Test the connection by trying to fetch the schema
+      try {
+        const response = await fetch(
+          `http://localhost:8000/schema?db_url=${encodeURIComponent(connection.connection_string)}`,
+          {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            signal: AbortSignal.timeout(10000)
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error('Failed to connect to database');
+        }
+
+        // If we get here, the connection is working, so update it to active
+        const updateQuery = `
+          UPDATE database_connections 
+          SET is_active = true, last_used = NOW() 
+          WHERE id = ?
+        `;
+
+        db.query(updateQuery, [connectionId], (err, result) => {
+          if (err) {
+            console.error('Error updating connection:', err);
+            return res.status(500).json({ error: 'Error updating connection status' });
+          }
+
+          res.json({ 
+            message: 'Connection reactivated successfully',
+            connection: {
+              id: connection.id,
+              name: connection.name,
+              type: connection.type,
+              isActive: true
+            }
+          });
+        });
+      } catch (error) {
+        console.error('Error testing connection:', error);
+        res.status(400).json({ 
+          error: 'Failed to reconnect',
+          details: 'Could not establish a connection to the database. Please verify your connection details.'
+        });
+      }
+    });
+  } catch (error) {
+    console.error('Error in connection reconnect:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
