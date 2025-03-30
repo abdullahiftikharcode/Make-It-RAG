@@ -2,8 +2,6 @@
 
 A powerful AI-powered SQL query generator that allows users to interact with their databases using natural language. Built with Next.js, FastAPI, and Google's Gemini AI.
 
-![SQL Chat Assistant](https://via.placeholder.com/800x400?text=SQL+Chat+Assistant)
-
 ## Features
 
 - 🤖 Natural language to SQL conversion using Google's Gemini AI
@@ -158,6 +156,10 @@ sql-chat-assistant/
 4. Push to the branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
 
+![localhost_3000_ (3)](https://github.com/user-attachments/assets/e4d2b05d-cae1-4979-8fc2-9ad6ce822c1d)
+
+
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
@@ -171,8 +173,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Support
 
-For support, email support@sqlchatapp.com or join our Slack channel.
+For support, email ai868419@gmail.com or join our Slack channel.
 
 ---
 
-Made with ❤️ by [Your Name/Organization] 
+Made with ❤️ by Abdullah Iftikhar 
