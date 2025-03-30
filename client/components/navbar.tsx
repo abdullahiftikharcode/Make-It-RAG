@@ -3,26 +3,48 @@
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { ModeToggle } from "./mode-toggle"
-import { Menu } from "lucide-react"
+import { Menu, Home } from "lucide-react"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { Separator } from "@/components/ui/separator"
+import { usePathname, useRouter } from "next/navigation"
+import { useEffect } from "react"
 
 export function Navbar() {
-  const scrollToFeatures = (e: React.MouseEvent) => {
-    e.preventDefault()
-    const featuresSection = document.getElementById('features')
-    if (featuresSection) {
-      featuresSection.scrollIntoView({ behavior: 'smooth' })
+  const pathname = usePathname()
+  const router = useRouter()
+  const isHomePage = pathname === "/"
+
+  const scrollToSection = (sectionId: string) => {
+    const section = document.getElementById(sectionId)
+    if (section) {
+      section.scrollIntoView({ behavior: 'smooth' })
     }
   }
 
-  const scrollToPricing = (e: React.MouseEvent) => {
-    e.preventDefault()
-    const pricingSection = document.getElementById('pricing')
-    if (pricingSection) {
-      pricingSection.scrollIntoView({ behavior: 'smooth' })
+  const handleNavigation = (sectionId: string) => {
+    if (!isHomePage) {
+      // If we're not on the home page, navigate to home page first
+      router.push('/')
+      // Use a longer timeout to ensure the page has loaded
+      setTimeout(() => {
+        scrollToSection(sectionId)
+      }, 500)
+    } else {
+      // If we're already on the home page, just scroll
+      scrollToSection(sectionId)
     }
   }
+
+  // Handle hash in URL on page load
+  useEffect(() => {
+    const hash = window.location.hash.slice(1)
+    if (hash) {
+      // Add a small delay to ensure the page has loaded
+      setTimeout(() => {
+        scrollToSection(hash)
+      }, 100)
+    }
+  }, [pathname])
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -35,12 +57,22 @@ export function Navbar() {
 
         {/* Desktop navigation */}
         <nav className="hidden md:flex items-center gap-6">
-          <Link href="/" className="text-sm font-medium" onClick={scrollToFeatures}>
+          <Link href="/" className="text-sm font-medium flex items-center gap-1">
+            <Home className="h-4 w-4" />
+            Home
+          </Link>
+          <button 
+            onClick={() => handleNavigation('features')} 
+            className="text-sm font-medium"
+          >
             Features
-          </Link>
-          <Link href="/" className="text-sm font-medium" onClick={scrollToPricing}>
+          </button>
+          <button 
+            onClick={() => handleNavigation('pricing')} 
+            className="text-sm font-medium"
+          >
             Pricing
-          </Link>
+          </button>
           <Link href="/docs" className="text-sm font-medium">
             Documentation
           </Link>
@@ -71,12 +103,22 @@ export function Navbar() {
             </SheetTrigger>
             <SheetContent side="right">
               <div className="flex flex-col gap-4 py-4">
-                <Link href="/" className="text-sm font-medium" onClick={scrollToFeatures}>
+                <Link href="/" className="text-sm font-medium flex items-center gap-1">
+                  <Home className="h-4 w-4" />
+                  Home
+                </Link>
+                <button 
+                  onClick={() => handleNavigation('features')} 
+                  className="text-sm font-medium text-left"
+                >
                   Features
-                </Link>
-                <Link href="/" className="text-sm font-medium" onClick={scrollToPricing}>
+                </button>
+                <button 
+                  onClick={() => handleNavigation('pricing')} 
+                  className="text-sm font-medium text-left"
+                >
                   Pricing
-                </Link>
+                </button>
                 <Link href="/docs" className="text-sm font-medium">
                   Documentation
                 </Link>

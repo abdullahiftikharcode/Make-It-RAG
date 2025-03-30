@@ -69,7 +69,7 @@ export function HeroSection() {
   if (!mounted) return null
 
   return (
-    <section className="relative w-full overflow-hidden bg-gradient-to-b from-background to-background/80 py-20 md:py-32">
+    <section className="relative w-full overflow-hidden bg-gradient-to-b from-background to-background/80 py-12 md:py-20">
       {/* Background decoration */}
       <div className="absolute inset-0 -z-10 overflow-hidden">
         <div className="absolute -top-[40%] left-[20%] h-[500px] w-[500px] rounded-full bg-primary/10 blur-[100px]" />
