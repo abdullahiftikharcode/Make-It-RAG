@@ -78,7 +78,7 @@ export function HeroSection() {
       </div>
 
       <div className="container px-4 md:px-6">
-        <div className="grid gap-12 lg:grid-cols-[1fr_600px] lg:gap-16 xl:grid-cols-[1fr_750px]">
+        <div className="flex flex-col gap-12 lg:grid lg:grid-cols-[1fr_600px] lg:gap-16 xl:grid-cols-[1fr_750px]">
           <motion.div
             className="flex flex-col justify-center space-y-8"
             initial={{ opacity: 0, y: 20 }}
@@ -93,7 +93,7 @@ export function HeroSection() {
                 </span>
                 New: Multi-database support
               </div>
-              <h1 className="text-4xl font-bold tracking-tighter sm:text-5xl md:text-6xl lg:text-7xl">
+              <h1 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl">
                 Chat with Your Database in <span className="text-primary">Plain English</span>
               </h1>
               <p className="max-w-[600px] text-muted-foreground text-lg md:text-xl">
@@ -101,7 +101,7 @@ export function HeroSection() {
                 instant insights from your data.
               </p>
             </div>
-            <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex flex-col space-y-3 sm:flex-row sm:space-y-0 sm:gap-4">
               <Link href="/signup">
                 <Button size="lg" className="group">
                   Get Started Free
@@ -114,7 +114,7 @@ export function HeroSection() {
                 </Button>
               </Link>
             </div>
-            <div className="flex items-center gap-4 text-sm text-muted-foreground">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 text-sm text-muted-foreground">
               <div className="flex items-center">
                 <svg viewBox="0 0 24 24" className="mr-2 h-4 w-4 text-primary" fill="none">
                   <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
@@ -145,7 +145,7 @@ export function HeroSection() {
           </motion.div>
 
           <motion.div
-            className="relative mx-auto flex items-center justify-center lg:justify-end"
+            className="relative mx-auto w-full flex items-center justify-center lg:justify-end"
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.5, delay: 0.2 }}
@@ -244,123 +244,125 @@ ORDER BY total_revenue DESC;`}
                       <div className="font-medium">Results</div>
                       <div className="text-xs text-muted-foreground">5 of 24 rows</div>
                     </div>
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-xs">
-                        <thead>
-                          <tr className="border-b">
+                    <div className="overflow-x-auto -mx-4 sm:mx-0">
+                      <div className="min-w-[400px] px-4 sm:px-0">
+                        <table className="w-full text-xs">
+                          <thead>
+                            <tr className="border-b">
+                              {currentTextIndex === 0 && (
+                                <>
+                                  <th className="px-2 py-1 text-left font-medium">Date</th>
+                                  <th className="px-2 py-1 text-left font-medium">Product</th>
+                                  <th className="px-2 py-1 text-left font-medium">Amount</th>
+                                </>
+                              )}
+                              {currentTextIndex === 1 && (
+                                <>
+                                  <th className="px-2 py-1 text-left font-medium">Customer</th>
+                                  <th className="px-2 py-1 text-left font-medium">Email</th>
+                                  <th className="px-2 py-1 text-left font-medium">Total Spent</th>
+                                </>
+                              )}
+                              {currentTextIndex === 2 && (
+                                <>
+                                  <th className="px-2 py-1 text-left font-medium">Product</th>
+                                  <th className="px-2 py-1 text-left font-medium">Category</th>
+                                  <th className="px-2 py-1 text-left font-medium">Quantity</th>
+                                  <th className="px-2 py-1 text-left font-medium">Status</th>
+                                </>
+                              )}
+                              {currentTextIndex === 3 && (
+                                <>
+                                  <th className="px-2 py-1 text-left font-medium">Region</th>
+                                  <th className="px-2 py-1 text-left font-medium">Revenue</th>
+                                  <th className="px-2 py-1 text-left font-medium">Customers</th>
+                                </>
+                              )}
+                            </tr>
+                          </thead>
+                          <tbody>
                             {currentTextIndex === 0 && (
                               <>
-                                <th className="px-2 py-1 text-left font-medium">Date</th>
-                                <th className="px-2 py-1 text-left font-medium">Product</th>
-                                <th className="px-2 py-1 text-left font-medium">Amount</th>
+                                <tr className="border-b">
+                                  <td className="px-2 py-1">2023-10-15</td>
+                                  <td className="px-2 py-1">Premium Plan</td>
+                                  <td className="px-2 py-1">$2,500.00</td>
+                                </tr>
+                                <tr className="border-b">
+                                  <td className="px-2 py-1">2023-10-12</td>
+                                  <td className="px-2 py-1">Enterprise License</td>
+                                  <td className="px-2 py-1">$1,800.00</td>
+                                </tr>
+                                <tr className="border-b">
+                                  <td className="px-2 py-1">2023-10-08</td>
+                                  <td className="px-2 py-1">Premium Plan</td>
+                                  <td className="px-2 py-1">$1,200.00</td>
+                                </tr>
                               </>
                             )}
                             {currentTextIndex === 1 && (
                               <>
-                                <th className="px-2 py-1 text-left font-medium">Customer</th>
-                                <th className="px-2 py-1 text-left font-medium">Email</th>
-                                <th className="px-2 py-1 text-left font-medium">Total Spent</th>
+                                <tr className="border-b">
+                                  <td className="px-2 py-1">Acme Corp</td>
+                                  <td className="px-2 py-1">contact@acme.com</td>
+                                  <td className="px-2 py-1">$12,450.00</td>
+                                </tr>
+                                <tr className="border-b">
+                                  <td className="px-2 py-1">Globex</td>
+                                  <td className="px-2 py-1">info@globex.com</td>
+                                  <td className="px-2 py-1">$8,720.00</td>
+                                </tr>
+                                <tr className="border-b">
+                                  <td className="px-2 py-1">Initech</td>
+                                  <td className="px-2 py-1">sales@initech.com</td>
+                                  <td className="px-2 py-1">$5,340.00</td>
+                                </tr>
                               </>
                             )}
                             {currentTextIndex === 2 && (
                               <>
-                                <th className="px-2 py-1 text-left font-medium">Product</th>
-                                <th className="px-2 py-1 text-left font-medium">Category</th>
-                                <th className="px-2 py-1 text-left font-medium">Quantity</th>
-                                <th className="px-2 py-1 text-left font-medium">Status</th>
+                                <tr className="border-b">
+                                  <td className="px-2 py-1">Wireless Keyboard</td>
+                                  <td className="px-2 py-1">Electronics</td>
+                                  <td className="px-2 py-1">5</td>
+                                  <td className="px-2 py-1 text-red-500">Low</td>
+                                </tr>
+                                <tr className="border-b">
+                                  <td className="px-2 py-1">USB-C Cable</td>
+                                  <td className="px-2 py-1">Accessories</td>
+                                  <td className="px-2 py-1">8</td>
+                                  <td className="px-2 py-1 text-red-500">Low</td>
+                                </tr>
+                                <tr className="border-b">
+                                  <td className="px-2 py-1">Wireless Mouse</td>
+                                  <td className="px-2 py-1">Electronics</td>
+                                  <td className="px-2 py-1">12</td>
+                                  <td className="px-2 py-1 text-red-500">Low</td>
+                                </tr>
                               </>
                             )}
                             {currentTextIndex === 3 && (
                               <>
-                                <th className="px-2 py-1 text-left font-medium">Region</th>
-                                <th className="px-2 py-1 text-left font-medium">Revenue</th>
-                                <th className="px-2 py-1 text-left font-medium">Customers</th>
+                                <tr className="border-b">
+                                  <td className="px-2 py-1">North America</td>
+                                  <td className="px-2 py-1">$245,800.00</td>
+                                  <td className="px-2 py-1">1,245</td>
+                                </tr>
+                                <tr className="border-b">
+                                  <td className="px-2 py-1">Europe</td>
+                                  <td className="px-2 py-1">$187,650.00</td>
+                                  <td className="px-2 py-1">982</td>
+                                </tr>
+                                <tr className="border-b">
+                                  <td className="px-2 py-1">Asia Pacific</td>
+                                  <td className="px-2 py-1">$156,720.00</td>
+                                  <td className="px-2 py-1">845</td>
+                                </tr>
                               </>
                             )}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {currentTextIndex === 0 && (
-                            <>
-                              <tr className="border-b">
-                                <td className="px-2 py-1">2023-10-15</td>
-                                <td className="px-2 py-1">Premium Plan</td>
-                                <td className="px-2 py-1">$2,500.00</td>
-                              </tr>
-                              <tr className="border-b">
-                                <td className="px-2 py-1">2023-10-12</td>
-                                <td className="px-2 py-1">Enterprise License</td>
-                                <td className="px-2 py-1">$1,800.00</td>
-                              </tr>
-                              <tr className="border-b">
-                                <td className="px-2 py-1">2023-10-08</td>
-                                <td className="px-2 py-1">Premium Plan</td>
-                                <td className="px-2 py-1">$1,200.00</td>
-                              </tr>
-                            </>
-                          )}
-                          {currentTextIndex === 1 && (
-                            <>
-                              <tr className="border-b">
-                                <td className="px-2 py-1">Acme Corp</td>
-                                <td className="px-2 py-1">contact@acme.com</td>
-                                <td className="px-2 py-1">$12,450.00</td>
-                              </tr>
-                              <tr className="border-b">
-                                <td className="px-2 py-1">Globex</td>
-                                <td className="px-2 py-1">info@globex.com</td>
-                                <td className="px-2 py-1">$8,720.00</td>
-                              </tr>
-                              <tr className="border-b">
-                                <td className="px-2 py-1">Initech</td>
-                                <td className="px-2 py-1">sales@initech.com</td>
-                                <td className="px-2 py-1">$5,340.00</td>
-                              </tr>
-                            </>
-                          )}
-                          {currentTextIndex === 2 && (
-                            <>
-                              <tr className="border-b">
-                                <td className="px-2 py-1">Wireless Keyboard</td>
-                                <td className="px-2 py-1">Electronics</td>
-                                <td className="px-2 py-1">5</td>
-                                <td className="px-2 py-1 text-red-500">Low</td>
-                              </tr>
-                              <tr className="border-b">
-                                <td className="px-2 py-1">USB-C Cable</td>
-                                <td className="px-2 py-1">Accessories</td>
-                                <td className="px-2 py-1">8</td>
-                                <td className="px-2 py-1 text-red-500">Low</td>
-                              </tr>
-                              <tr className="border-b">
-                                <td className="px-2 py-1">Wireless Mouse</td>
-                                <td className="px-2 py-1">Electronics</td>
-                                <td className="px-2 py-1">12</td>
-                                <td className="px-2 py-1 text-red-500">Low</td>
-                              </tr>
-                            </>
-                          )}
-                          {currentTextIndex === 3 && (
-                            <>
-                              <tr className="border-b">
-                                <td className="px-2 py-1">North America</td>
-                                <td className="px-2 py-1">$245,800.00</td>
-                                <td className="px-2 py-1">1,245</td>
-                              </tr>
-                              <tr className="border-b">
-                                <td className="px-2 py-1">Europe</td>
-                                <td className="px-2 py-1">$187,650.00</td>
-                                <td className="px-2 py-1">982</td>
-                              </tr>
-                              <tr className="border-b">
-                                <td className="px-2 py-1">Asia Pacific</td>
-                                <td className="px-2 py-1">$156,720.00</td>
-                                <td className="px-2 py-1">845</td>
-                              </tr>
-                            </>
-                          )}
-                        </tbody>
-                      </table>
+                          </tbody>
+                        </table>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -381,11 +383,11 @@ ORDER BY total_revenue DESC;`}
           transition={{ duration: 0.5, delay: 0.4 }}
         >
           <p className="text-sm font-medium text-muted-foreground mb-6">TRUSTED BY INNOVATIVE COMPANIES</p>
-          <div className="flex flex-wrap justify-center gap-x-12 gap-y-8">
+          <div className="flex flex-wrap justify-center gap-x-8 gap-y-6 md:gap-x-12 md:gap-y-8">
             {["Acme Inc", "Globex", "Initech", "Umbrella Corp", "Stark Industries"].map((company) => (
               <div
                 key={company}
-                className="text-xl font-semibold text-muted-foreground/50 transition-colors hover:text-muted-foreground"
+                className="text-lg md:text-xl font-semibold text-muted-foreground/50 transition-colors hover:text-muted-foreground"
               >
                 {company}
               </div>

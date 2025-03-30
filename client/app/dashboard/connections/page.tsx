@@ -11,70 +11,70 @@ import { useToast } from "@/components/ui/use-toast"
 import { useRouter } from "next/navigation"
 
 interface Connection {
-  id: string;
-  name: string;
-  connectionString: string;
-  dialect: string;
-  createdAt: string;
-  lastUsed: string;
-  isActive: boolean;
-  size: string;
-  version: string;
-  queries: number;
-  tables: number;
+  id: string
+  name: string
+  connectionString: string
+  dialect: string
+  createdAt: string
+  lastUsed: string
+  isActive: boolean
+  size: string
+  version: string
+  queries: number
+  tables: number
 }
 
 export default function ConnectionsPage() {
-  const [connections, setConnections] = useState<Connection[]>([]);
-  const { toast } = useToast();
-  const router = useRouter();
+  const [connections, setConnections] = useState<Connection[]>([])
+  const { toast } = useToast()
+  const router = useRouter()
 
   // Function to fetch connections from the server
   useEffect(() => {
     const fetchConnections = async () => {
-      const token = localStorage.getItem("auth_token");
+      const token = localStorage.getItem("auth_token")
       if (!token) {
         toast({
           title: "Error",
           description: "Please log in to continue.",
           variant: "destructive",
-        });
-        return;
+        })
+        return
       }
       try {
         const response = await fetch("http://localhost:3001/api/connections", {
           headers: {
             Authorization: `Bearer ${token}`,
           },
-        });
+        })
         if (!response.ok) {
-          const data = await response.json();
-          throw new Error(data.error || "Failed to fetch connections");
+          const data = await response.json()
+          throw new Error(data.error || "Failed to fetch connections")
         }
-        const data = await response.json();
-        setConnections(data);
+        const data = await response.json()
+        setConnections(data)
       } catch (error: any) {
         toast({
           title: "Error",
           description: error.message || "Failed to fetch connections",
           variant: "destructive",
-        });
+        })
       }
-    };
+    }
 
-    fetchConnections();
-  }, [toast]);
+    fetchConnections()
+  }, [toast])
 
   // Handler to delete a connection
   const handleDelete = async (connectionId: string) => {
-    const token = localStorage.getItem("auth_token");
+    const token = localStorage.getItem("auth_token")
     if (!token) {
       toast({
         title: "Error",
         description: "Please log in to continue.",
         variant: "destructive",
-      });
-      return;
+      })
+      return
     }
     try {
       const response = await fetch(`http://localhost:3001/api/connections/${connectionId}`, {
@@ -82,40 +82,39 @@ export default function ConnectionsPage() {
         headers: {
           Authorization: `Bearer ${token}`,
         },
-      });
-      const data = await response.json();
+      })
+      const data = await response.json()
       if (!response.ok) {
-        throw new Error(data.error || "Failed to delete connection");
+        throw new Error(data.error || "Failed to delete connection")
       }
       // Remove deleted connection from the state
-      setConnections(prev => prev.filter(conn => conn.id !== connectionId));
+      setConnections((prev) => prev.filter((conn) => conn.id !== connectionId))
       toast({
         title: "Success",
         description: data.message || "Connection deleted successfully",
-      });
+      })
     } catch (error: any) {
       toast({
         title: "Error",
         description: error.message || "Failed to delete connection",
         variant: "destructive",
-      });
+      })
     }
-  };
+  }
 
   // Handler to start a new chat session for a connection
   const handleStartChat = async (connectionId: string) => {
     try {
-      const token = localStorage.getItem("auth_token");
+      const token = localStorage.getItem("auth_token")
       if (!token) {
         toast({
           title: "Error",
           description: "Please log in to continue.",
           variant: "destructive",
-        });
-        return;
+        })
+        return
       }
       // Create a new chat session via the API.
-      // We use an empty messages array (or you could include a default system message) and a default title.
       const response = await fetch("http://localhost:3001/api/chat-sessions", {
         method: "POST",
         headers: {
@@ -125,42 +124,42 @@ export default function ConnectionsPage() {
         body: JSON.stringify({
           connectionId,
           title: "New Chat",
-          messages: [] // You can provide an initial message if desired
+          messages: [], // You can provide an initial message if desired
         }),
-      });
-      const data = await response.json();
+      })
+      const data = await response.json()
       if (!response.ok) {
-        throw new Error(data.error || "Failed to start chat session");
+        throw new Error(data.error || "Failed to start chat session")
       }
       // Navigate to the chat page using the newly created session ID.
-      router.push(`/dashboard/chat/${connectionId}`);
+      router.push(`/dashboard/chat/${connectionId}`)
     } catch (error: any) {
       toast({
         title: "Error",
         description: error.message || "Failed to start chat session",
         variant: "destructive",
-      });
+      })
     }
-  };
+  }
 
   return (
     <DashboardShell>
       <DashboardHeader heading="Database Connections" text="Manage your database connections.">
         <Link href="/dashboard/connections/new">
-          <Button>
+          <Button className="w-full sm:w-auto">
             <Plus className="mr-2 h-4 w-4" />
-            New Connection
+            <span>New Connection</span>
           </Button>
         </Link>
       </DashboardHeader>
-      <div className="grid gap-6 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
         {connections.map((connection) => (
           <Card key={connection.id}>
             <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                 <CardTitle className="text-lg font-medium">{connection.name}</CardTitle>
                 <div
-                  className={`rounded-full px-2 py-1 text-xs font-medium ${
+                  className={`rounded-full px-2 py-1 text-xs font-medium w-fit ${
                     connection.isActive ? "bg-green-500/20 text-green-600" : "bg-red-500/20 text-red-600"
                   }`}
                 >
@@ -174,9 +173,7 @@ export default function ConnectionsPage() {
             <CardContent className="pb-3">
               <div className="flex items-center space-x-2">
                 <Database className="h-5 w-5 text-muted-foreground" />
-                <span className="text-xs sm:text-sm text-muted-foreground truncate">
-                  {connection.connectionString}
-                </span>
+                <span className="text-xs sm:text-sm text-muted-foreground truncate">{connection.connectionString}</span>
               </div>
               <div className="mt-3 grid grid-cols-2 gap-2 text-xs sm:text-sm">
                 <div>
@@ -197,11 +194,16 @@ export default function ConnectionsPage() {
                 </div>
               </div>
             </CardContent>
-            <CardFooter className="flex justify-between pt-3">
-              <Button variant="outline" size="sm" onClick={() => handleStartChat(connection.id)}>
+            <CardFooter className="flex flex-col sm:flex-row justify-between gap-2 pt-3">
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full sm:w-auto"
+                onClick={() => handleStartChat(connection.id)}
+              >
                 Chat
               </Button>
-              <div className="flex space-x-2">
+              <div className="flex space-x-2 w-full sm:w-auto justify-end">
                 <Button variant="outline" size="sm">
                   <Edit className="h-4 w-4" />
                 </Button>
@@ -219,5 +221,6 @@ export default function ConnectionsPage() {
         ))}
       </div>
     </DashboardShell>
-  );
+  )
 }
+
