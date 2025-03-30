@@ -1246,6 +1246,54 @@ app.get('/api/dashboard/recent-chats', verifyToken, (req, res) => {
   });
 });
 
+// PUT /api/change-password endpoint to change the user's password
+app.put('/api/change-password', verifyToken, (req, res) => {
+  const userId = req.user.userId;
+  const { currentPassword, newPassword, confirmNewPassword } = req.body;
+  
+  // Validate required fields
+  if (!currentPassword || !newPassword || !confirmNewPassword) {
+    return res.status(400).json({ error: 'Missing required fields.' });
+  }
+  
+  // Ensure new passwords match
+  if (newPassword !== confirmNewPassword) {
+    return res.status(400).json({ error: 'New passwords do not match.' });
+  }
+  
+  // Query the current password hash for the user
+  const query = 'SELECT password_hash FROM users WHERE id = ?';
+  db.query(query, [userId], (err, results) => {
+    if (err) {
+      console.error('Error fetching user:', err);
+      return res.status(500).json({ error: 'Server error fetching user data.' });
+    }
+    if (results.length === 0) {
+      return res.status(404).json({ error: 'User not found.' });
+    }
+    
+    const storedHash = results[0].password_hash;
+    const currentPasswordHash = CryptoJS.SHA256(currentPassword).toString();
+    
+    // Verify current password matches
+    if (storedHash !== currentPasswordHash) {
+      return res.status(400).json({ error: 'Current password is incorrect.' });
+    }
+    
+    // Hash the new password and update it
+    const newPasswordHash = CryptoJS.SHA256(newPassword).toString();
+    const updateQuery = 'UPDATE users SET password_hash = ? WHERE id = ?';
+    db.query(updateQuery, [newPasswordHash, userId], (err, updateResult) => {
+      if (err) {
+        console.error('Error updating password:', err);
+        return res.status(500).json({ error: 'Failed to update password.' });
+      }
+      res.json({ message: 'Password updated successfully.' });
+    });
+  });
+});
+
+
 
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);

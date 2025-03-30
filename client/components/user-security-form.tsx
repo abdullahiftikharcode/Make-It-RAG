@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -9,7 +8,6 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { useToast } from "@/components/ui/use-toast"
-import { Switch } from "@/components/ui/switch"
 
 export function UserSecurityForm() {
   const [isLoading, setIsLoading] = useState(false)
@@ -19,14 +17,51 @@ export function UserSecurityForm() {
     event.preventDefault()
     setIsLoading(true)
 
-    // This would be replaced with your actual API call
-    setTimeout(() => {
-      setIsLoading(false)
+    // Extract values from the form using FormData
+    const formData = new FormData(event.currentTarget)
+    const currentPassword = formData.get("current-password") as string
+    const newPassword = formData.get("new-password") as string
+    const confirmPassword = formData.get("confirm-password") as string
+
+    try {
+      const token = localStorage.getItem("auth_token")
+      if (!token) {
+        toast({
+          title: "Error",
+          description: "Please log in to continue.",
+          variant: "destructive",
+        })
+        return
+      }
+
+      // Call the change password API
+      const response = await fetch("http://localhost:3001/api/change-password", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ currentPassword, newPassword, confirmNewPassword: confirmPassword }),
+      })
+
+      const data = await response.json()
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to update password")
+      }
+
       toast({
         title: "Password updated",
-        description: "Your password has been updated successfully.",
+        description: data.message || "Your password has been updated successfully.",
       })
-    }, 2000)
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update password",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -40,15 +75,15 @@ export function UserSecurityForm() {
           <CardContent className="space-y-4">
             <div className="grid gap-2">
               <Label htmlFor="current-password">Current Password</Label>
-              <Input id="current-password" type="password" disabled={isLoading} required />
+              <Input id="current-password" name="current-password" type="password" disabled={isLoading} required />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="new-password">New Password</Label>
-              <Input id="new-password" type="password" disabled={isLoading} required />
+              <Input id="new-password" name="new-password" type="password" disabled={isLoading} required />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="confirm-password">Confirm New Password</Label>
-              <Input id="confirm-password" type="password" disabled={isLoading} required />
+              <Input id="confirm-password" name="confirm-password" type="password" disabled={isLoading} required />
             </div>
           </CardContent>
           <CardFooter>
@@ -70,7 +105,8 @@ export function UserSecurityForm() {
               <Label>Two-Factor Authentication</Label>
               <p className="text-sm text-muted-foreground">Require a verification code when signing in</p>
             </div>
-            <Switch />
+            {/* Implement switch functionality as needed */}
+            <input type="checkbox" />
           </div>
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
@@ -138,4 +174,3 @@ export function UserSecurityForm() {
     </div>
   )
 }
-
