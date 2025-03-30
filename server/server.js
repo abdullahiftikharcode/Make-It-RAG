@@ -1190,6 +1190,63 @@ app.get('/api/dashboard/stats', verifyToken, (req, res) => {
     });
 });
 
+// GET /api/dashboard/recent-connections endpoint
+app.get('/api/dashboard/recent-connections', verifyToken, (req, res) => {
+  const userId = req.user.userId;
+  const query = `
+    SELECT id, name, connection_string, type, created_at, last_used, is_active
+    FROM database_connections
+    WHERE user_id = ?
+    ORDER BY last_used DESC
+    LIMIT 3
+  `;
+  db.query(query, [userId], (err, results) => {
+    if (err) {
+      console.error("Error fetching recent connections:", err);
+      return res.status(500).json({ error: "Failed to fetch recent connections." });
+    }
+    res.json({ connections: results });
+  });
+});
+
+// GET /api/dashboard/recent-chats endpoint
+app.get('/api/dashboard/recent-chats', verifyToken, (req, res) => {
+  const userId = req.user.userId;
+  const query = `
+    SELECT 
+      cs.id,
+      cs.title,
+      dc.name AS connection_name,
+      cs.created_at,
+      cs.updated_at,
+      (
+        SELECT content 
+        FROM chat_messages 
+        WHERE session_id = cs.id AND role = 'user'
+        ORDER BY created_at ASC 
+        LIMIT 1
+      ) AS first_query,
+      (
+        SELECT COUNT(*) 
+        FROM chat_messages 
+        WHERE session_id = cs.id
+      ) AS message_count
+    FROM chat_sessions cs
+    JOIN database_connections dc ON cs.connection_id = dc.id
+    WHERE cs.user_id = ?
+    ORDER BY cs.updated_at DESC
+    LIMIT 5
+  `;
+  
+  db.query(query, [userId], (err, results) => {
+    if (err) {
+      console.error("Error fetching recent chats:", err);
+      return res.status(500).json({ error: "Failed to fetch recent chats." });
+    }
+    res.json({ sessions: results });
+  });
+});
+
 
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);

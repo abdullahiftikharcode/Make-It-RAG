@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect } from "react"
+import { useEffect, useState } from "react"
 import { DashboardHeader } from "@/components/dashboard-header"
 import { DashboardShell } from "@/components/dashboard-shell"
 import { Button } from "@/components/ui/button"
@@ -18,14 +18,18 @@ export default function DashboardPage() {
     savedChatsThisWeek: 0,
   })
   const [isLoading, setIsLoading] = useState(false)
+  const [recentConnections, setRecentConnections] = useState<any[]>([])
+  const [recentChats, setRecentChats] = useState<any[]>([])
+  const [isLoadingConns, setIsLoadingConns] = useState(true)
+  const [isLoadingChats, setIsLoadingChats] = useState(true)
 
+  // Fetch dashboard stats
   useEffect(() => {
     const fetchStats = async () => {
       setIsLoading(true)
       try {
         const token = localStorage.getItem("auth_token")
         if (!token) {
-          // You might want to handle not logged-in state appropriately.
           return
         }
         const response = await fetch("http://localhost:3001/api/dashboard/stats", {
@@ -48,6 +52,69 @@ export default function DashboardPage() {
     }
 
     fetchStats()
+  }, [])
+
+  // Fetch three most recent connections
+  useEffect(() => {
+    const fetchRecentConnections = async () => {
+      setIsLoadingConns(true)
+      try {
+        const token = localStorage.getItem("auth_token")
+        if (!token) return
+        const response = await fetch("http://localhost:3001/api/dashboard/recent-connections", {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        const contentType = response.headers.get("Content-Type")
+        if (!contentType || !contentType.includes("application/json")) {
+          const text = await response.text()
+          console.error("Expected JSON but got:", text)
+          throw new Error("Invalid JSON response from recent connections endpoint")
+        }
+        const data = await response.json()
+        if (!response.ok) {
+          throw new Error(data.error || "Failed to load recent connections")
+        }
+        // Display only the three most recent connections
+        const threeConnections = data.connections.slice(0, 3)
+        setRecentConnections(threeConnections)
+      } catch (error: any) {
+        console.error("Error loading recent connections:", error.message)
+      } finally {
+        setIsLoadingConns(false)
+      }
+    }
+    fetchRecentConnections()
+  }, [])
+
+  // Fetch recent chats from API
+  useEffect(() => {
+    const fetchRecentChats = async () => {
+      setIsLoadingChats(true)
+      try {
+        const token = localStorage.getItem("auth_token")
+        if (!token) return
+        const response = await fetch("http://localhost:3001/api/dashboard/recent-chats", {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        const contentType = response.headers.get("Content-Type")
+        if (!contentType || !contentType.includes("application/json")) {
+          const text = await response.text()
+          console.error("Expected JSON but got:", text)
+          throw new Error("Invalid JSON response from recent chats endpoint")
+        }
+        const data = await response.json()
+        if (!response.ok) {
+          throw new Error(data.error || "Failed to load recent chats")
+        }
+        // Assuming the API returns a sessions array containing recent chats
+        setRecentChats(data.sessions)
+      } catch (error: any) {
+        console.error("Error loading recent chats:", error.message)
+      } finally {
+        setIsLoadingChats(false)
+      }
+    }
+    fetchRecentChats()
   }, [])
 
   return (
@@ -115,89 +182,72 @@ export default function DashboardPage() {
         </Card>
       </div>
       <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-7">
+        {/* Recent Connections */}
         <Card className="col-span-1 md:col-span-4">
           <CardHeader>
             <CardTitle>Recent Connections</CardTitle>
             <CardDescription>Your recently used database connections.</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between border-b pb-4">
-                <div className="flex items-center space-x-4">
-                  <div className="rounded-full bg-primary/10 p-2">
-                    <Database className="h-4 w-4 text-primary" />
+            {isLoadingConns ? (
+              <p>Loading recent connections...</p>
+            ) : recentConnections.length === 0 ? (
+              <p className="text-muted-foreground">No recent connections found.</p>
+            ) : (
+              <div className="space-y-4">
+                {recentConnections.map((conn) => (
+                  <div key={conn.id} className="flex items-center justify-between border-b pb-4">
+                    <div className="flex items-center space-x-4">
+                      <div className="rounded-full bg-primary/10 p-2">
+                        <Database className="h-4 w-4 text-primary" />
+                      </div>
+                      <div>
+                        <p className="text-md font-medium">{conn.name}</p>
+                        {/* Display the type under the connection name */}
+                        <p className="text-sm text-muted-foreground">{conn.type}</p>
+                      </div>
+                    </div>
+                    <Link href={`/dashboard/chat/${conn.id}`}>
+                      <Button variant="outline" size="sm">
+                        Chat
+                      </Button>
+                    </Link>
                   </div>
-                  <div>
-                    <p className="text-sm font-medium">Production Database</p>
-                    <p className="text-xs text-muted-foreground">PostgreSQL</p>
-                  </div>
-                </div>
-                <Link href="/dashboard/chat/1">
-                  <Button variant="outline" size="sm">
-                    Chat
-                  </Button>
-                </Link>
+                ))}
               </div>
-              <div className="flex items-center justify-between border-b pb-4">
-                <div className="flex items-center space-x-4">
-                  <div className="rounded-full bg-primary/10 p-2">
-                    <Database className="h-4 w-4 text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium">Development Database</p>
-                    <p className="text-xs text-muted-foreground">MySQL</p>
-                  </div>
-                </div>
-                <Link href="/dashboard/chat/2">
-                  <Button variant="outline" size="sm">
-                    Chat
-                  </Button>
-                </Link>
-              </div>
-            </div>
+            )}
           </CardContent>
         </Card>
+        {/* Recent Chats */}
         <Card className="col-span-1 md:col-span-3">
           <CardHeader>
             <CardTitle>Recent Chats</CardTitle>
             <CardDescription>Your recent database conversations.</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between border-b pb-4">
-                <div>
-                  <p className="text-sm font-medium">Monthly Sales Analysis</p>
-                  <p className="text-xs text-muted-foreground">2 days ago</p>
-                </div>
-                <Link href="/dashboard/history/1">
-                  <Button variant="ghost" size="sm">
-                    View
-                  </Button>
-                </Link>
+            {isLoadingChats ? (
+              <p>Loading recent chats...</p>
+            ) : recentChats.length === 0 ? (
+              <p className="text-muted-foreground">No recent chats found.</p>
+            ) : (
+              <div className="space-y-4">
+                {recentChats.map((session) => (
+                  <div key={session.id} className="flex items-center justify-between border-b pb-4">
+                    <div>
+                      <p className="text-sm font-medium">{session.title}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {session.updatedAt ? session.updatedAt.substring(0, 10) : "N/A"}
+                      </p>
+                    </div>
+                    <Link href={`/dashboard/history/${session.id}`}>
+                      <Button variant="ghost" size="sm">
+                        View
+                      </Button>
+                    </Link>
+                  </div>
+                ))}
               </div>
-              <div className="flex items-center justify-between border-b pb-4">
-                <div>
-                  <p className="text-sm font-medium">Customer Demographics</p>
-                  <p className="text-xs text-muted-foreground">5 days ago</p>
-                </div>
-                <Link href="/dashboard/history/2">
-                  <Button variant="ghost" size="sm">
-                    View
-                  </Button>
-                </Link>
-              </div>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium">Inventory Status</p>
-                  <p className="text-xs text-muted-foreground">1 week ago</p>
-                </div>
-                <Link href="/dashboard/history/3">
-                  <Button variant="ghost" size="sm">
-                    View
-                  </Button>
-                </Link>
-              </div>
-            </div>
+            )}
           </CardContent>
         </Card>
       </div>
