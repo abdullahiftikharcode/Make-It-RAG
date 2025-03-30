@@ -74,8 +74,12 @@ export function LoginForm() {
 
       if (!response.ok) {
         toast({
-          title: "Error",
-          description: data.error || "Something went wrong",
+          title: "Login failed",
+          description: data.error === "Invalid credentials" 
+            ? "Invalid email or password. Please try again."
+            : data.error === "User not found"
+            ? "No account found with this email. Please sign up first."
+            : data.error || "Something went wrong. Please try again.",
           variant: "destructive",
         })
       } else {
@@ -98,8 +102,8 @@ export function LoginForm() {
       }
     } catch (error) {
       toast({
-        title: "Error",
-        description: "Network error, please try again.",
+        title: "Connection error",
+        description: "Unable to connect to the server. Please check your internet connection and try again.",
         variant: "destructive",
       })
     } finally {

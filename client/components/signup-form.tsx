@@ -35,8 +35,14 @@ export function SignupForm() {
 
       if (!response.ok) {
         toast({
-          title: "Error",
-          description: data.error || "Something went wrong",
+          title: "Signup failed",
+          description: data.error === "Email already exists"
+            ? "An account with this email already exists. Please log in instead."
+            : data.error === "Invalid email format"
+            ? "Please enter a valid email address."
+            : data.error === "Password too short"
+            ? "Password must be at least 8 characters long."
+            : data.error || "Something went wrong. Please try again.",
           variant: "destructive",
         })
       } else {
@@ -52,8 +58,8 @@ export function SignupForm() {
       }
     } catch (error) {
       toast({
-        title: "Error",
-        description: "Network error, please try again.",
+        title: "Connection error",
+        description: "Unable to connect to the server. Please check your internet connection and try again.",
         variant: "destructive",
       })
     } finally {

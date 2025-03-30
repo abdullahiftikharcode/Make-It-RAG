@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster"
 import "./globals.css"
 import type { Metadata } from "next"
 import { Inter } from "next/font/google"
+import PageTransition from "@/components/page-transition"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -24,7 +25,9 @@ export default function RootLayout({
       <body className={`${inter.className} transition-theme`}>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           <ThemeProviderClient>
-            {children}
+            <PageTransition>
+              {children}
+            </PageTransition>
             <Toaster />
           </ThemeProviderClient>
         </ThemeProvider>
