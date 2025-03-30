@@ -234,7 +234,6 @@ app.post('/login', (req, res) => {
 app.post('/api/chat', verifyToken, async (req, res) => {
   const { connectionId, query, sessionId, settings } = req.body;
   const userId = req.user.userId;
-  console.log(connectionId)
   if (!connectionId || !query) {
     return res.status(400).json({ error: 'Missing required fields' });
   }

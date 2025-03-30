@@ -239,7 +239,7 @@ export default function DashboardPage() {
                         {session.updatedAt ? session.updatedAt.substring(0, 10) : "N/A"}
                       </p>
                     </div>
-                    <Link href={`/dashboard/history/${session.id}`}>
+                    <Link href={`/dashboard/chat/sess-${session.id}`}>
                       <Button variant="ghost" size="sm">
                         View
                       </Button>

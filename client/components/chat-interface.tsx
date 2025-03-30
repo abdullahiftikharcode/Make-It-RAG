@@ -403,7 +403,10 @@ export function ChatInterface({ connectionId, sessionId }: ChatInterfaceProps) {
       ) {
         currentSessionId = undefined
       }
-  
+      else if (currentSessionId.startsWith("sess-"))
+{
+  currentSessionId =currentSessionId.replace("sess-", "")
+}  
       // Determine proper connectionId.
       // If we have a sessionId, attempt to fetch session details using both sessionId and connectionId concurrently.
       let localConnectionId = connectionId
