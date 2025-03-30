@@ -236,7 +236,15 @@ export default function DashboardPage() {
                     <div>
                       <p className="text-sm font-medium">{session.title}</p>
                       <p className="text-xs text-muted-foreground">
-                        {session.updatedAt ? session.updatedAt.substring(0, 10) : "N/A"}
+                      {session.updated_at 
+  ? new Date(session.updated_at.replace(" ", "T")).toLocaleString(undefined, {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+  : "N/A"}
                       </p>
                     </div>
                     <Link href={`/dashboard/chat/sess-${session.id}`}>
