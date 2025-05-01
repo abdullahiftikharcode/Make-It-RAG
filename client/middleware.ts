@@ -17,34 +17,46 @@ export async function middleware(request: NextRequest) {
   const isProtectedRoute = protectedRoutes.some(route => path.startsWith(route))
 
   if (isProtectedRoute) {
-    // Get token from localStorage (Note: localStorage is not available in middleware)
-    // We'll need to pass it in a cookie instead
     const token = request.cookies.get('auth_token')?.value
 
     if (!token) {
-      // No token found, redirect to login
-      return NextResponse.redirect(new URL('/login', request.url))
+      // No token found, redirect to login with return URL
+      const url = new URL('/login', request.url)
+      url.searchParams.set('returnUrl', path)
+      return NextResponse.redirect(url)
     }
 
     try {
+      // Add timeout to prevent hanging request
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 5000) // 5-second timeout
+      
       // Validate token with server
       const response = await fetch('http://localhost:3001/validate-token', {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
+        signal: controller.signal
       })
+      
+      clearTimeout(timeoutId)
 
       if (!response.ok) {
         // Token is invalid or expired, redirect to login
-        return NextResponse.redirect(new URL('/login', request.url))
+        const url = new URL('/login', request.url)
+        url.searchParams.set('returnUrl', path)
+        return NextResponse.redirect(url)
       }
 
       // Token is valid, allow access
       return NextResponse.next()
     } catch (error) {
+      console.error('Token validation error:', error)
       // Network error or other issues, redirect to login
-      return NextResponse.redirect(new URL('/login', request.url))
+      const url = new URL('/login', request.url)
+      url.searchParams.set('returnUrl', path)
+      return NextResponse.redirect(url)
     }
   }
 

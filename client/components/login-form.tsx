@@ -1,24 +1,36 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { useState, useEffect, useRef } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { useToast } from "@/components/ui/use-toast"
+import { useBubble } from "@/hooks/use-bubble"
 import Cookies from 'js-cookie'
 
 export function LoginForm() {
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
-  const { toast } = useToast()
+  const searchParams = useSearchParams()
+  const { toast } = useBubble()
+  const isRedirecting = useRef(false) // Add ref to track redirect status
+  const tokenChecked = useRef(false) // Add ref to track if token was already checked
+  
+  // Get returnUrl from query params if available
+  const returnUrl = searchParams.get('returnUrl') || '/dashboard'
 
   // Check for valid token when component mounts
   useEffect(() => {
+    // Skip if we've already checked the token or already redirecting
+    if (tokenChecked.current || isRedirecting.current) return;
+    
     const checkStoredToken = async () => {
-      const storedToken = localStorage.getItem('auth_token')
-      if (!storedToken) return
+      const storedToken = localStorage.getItem('auth_token') || Cookies.get('auth_token')
+      if (!storedToken) {
+        tokenChecked.current = true;
+        return;
+      }
 
       try {
         const validateResponse = await fetch("http://localhost:3001/validate-token", {
@@ -30,12 +42,32 @@ export function LoginForm() {
         })
 
         if (validateResponse.ok) {
-          // Token is valid, automatically log in
-          toast({
-            title: "Login successful!",
-            description: "Welcome back to SQL Chat Assistant.",
-          })
-          router.push("/dashboard")
+          // Token is valid, redirect only if not already redirecting
+          if (!isRedirecting.current) {
+            isRedirecting.current = true;
+            
+            // Make sure the cookie is set correctly for middleware
+            if (!Cookies.get('auth_token')) {
+              Cookies.set('auth_token', storedToken, { 
+                expires: 1/24, // 1 hour
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'lax',
+                path: '/' // Ensure cookie is available for all paths
+              })
+            }
+            
+            toast({
+              title: "Login Successful",
+              description: "Welcome back to SQL Chat Assistant.",
+              variant: "success",
+              duration: 3000
+            })
+            
+            // Short timeout to ensure toast has time to appear before redirect
+            setTimeout(() => {
+              router.push(returnUrl);
+            }, 100);
+          }
         } else {
           // Token is invalid, clear it
           localStorage.removeItem('auth_token')
@@ -47,15 +79,20 @@ export function LoginForm() {
         localStorage.removeItem('auth_token')
         localStorage.removeItem('user_data')
         Cookies.remove('auth_token')
+      } finally {
+        tokenChecked.current = true;
       }
     }
 
     checkStoredToken()
-  }, [router, toast])
+  }, [router, toast, returnUrl])
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setIsLoading(true)
+
+    // Prevent multiple submissions
+    if (isRedirecting.current) return;
 
     try {
       const formData = new FormData(event.currentTarget)
@@ -74,15 +111,19 @@ export function LoginForm() {
 
       if (!response.ok) {
         toast({
-          title: "Login failed",
+          title: "Login Failed",
           description: data.error === "Invalid credentials" 
             ? "Invalid email or password. Please try again."
             : data.error === "User not found"
             ? "No account found with this email. Please sign up first."
             : data.error || "Something went wrong. Please try again.",
           variant: "destructive",
+          duration: 5000
         })
       } else {
+        // Only set redirecting flag if login is successful
+        isRedirecting.current = true;
+        
         // Store the token in both localStorage and cookie
         localStorage.setItem('auth_token', data.token)
         localStorage.setItem('user_data', JSON.stringify(data.user))
@@ -91,20 +132,28 @@ export function LoginForm() {
         Cookies.set('auth_token', data.token, { 
           expires: 1/24, // 1 hour
           secure: process.env.NODE_ENV === 'production',
-          sameSite: 'strict'
+          sameSite: 'lax',
+          path: '/' // Ensure cookie is available for all paths
         })
         
         toast({
-          title: "Login successful!",
+          title: "Login Successful",
           description: "Welcome back to SQL Chat Assistant.",
+          variant: "success",
+          duration: 3000
         })
-        router.push("/dashboard")
+        
+        // Short timeout to ensure toast has time to appear
+        setTimeout(() => {
+          router.push(returnUrl);
+        }, 100);
       }
     } catch (error) {
       toast({
-        title: "Connection error",
+        title: "Connection Error",
         description: "Unable to connect to the server. Please check your internet connection and try again.",
         variant: "destructive",
+        duration: 5000
       })
     } finally {
       setIsLoading(false)

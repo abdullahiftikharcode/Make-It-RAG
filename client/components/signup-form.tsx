@@ -1,21 +1,25 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
+import { useState, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { useToast } from "@/components/ui/use-toast"
+import { useBubble } from "@/hooks/use-bubble"
 
 export function SignupForm() {
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
-  const { toast } = useToast()
+  const { toast } = useBubble()
+  const isRedirecting = useRef(false) // Add ref to track redirect status
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setIsLoading(true)
+
+    // Prevent multiple submissions
+    if (isRedirecting.current) return;
 
     const formData = new FormData(event.currentTarget)
     const email = formData.get("email") as string
@@ -35,7 +39,7 @@ export function SignupForm() {
 
       if (!response.ok) {
         toast({
-          title: "Signup failed",
+          title: "Signup Failed",
           description: data.error === "Email already exists"
             ? "An account with this email already exists. Please log in instead."
             : data.error === "Invalid email format"
@@ -44,23 +48,34 @@ export function SignupForm() {
             ? "Password must be at least 8 characters long."
             : data.error || "Something went wrong. Please try again.",
           variant: "destructive",
+          duration: 5000
         })
       } else {
+        // Mark as redirecting to prevent multiple redirects
+        isRedirecting.current = true;
+        
         // Store the token and user data in localStorage
         localStorage.setItem('auth_token', data.token)
         localStorage.setItem('user_data', JSON.stringify(data.user))
         
         toast({
-          title: "Account created!",
+          title: "Account Created",
           description: "You've successfully signed up for SQL Chat Assistant.",
+          variant: "success",
+          duration: 3000
         })
-        router.push("/dashboard")
+        
+        // Short timeout to ensure toast has time to appear
+        setTimeout(() => {
+          router.push("/dashboard");
+        }, 100);
       }
     } catch (error) {
       toast({
-        title: "Connection error",
+        title: "Connection Error",
         description: "Unable to connect to the server. Please check your internet connection and try again.",
         variant: "destructive",
+        duration: 5000
       })
     } finally {
       setIsLoading(false)
@@ -111,7 +126,7 @@ export function SignupForm() {
               required
             />
           </div>
-          <Button disabled={isLoading}>
+          <Button disabled={isLoading || isRedirecting.current}>
             {isLoading ? "Creating account..." : "Create account"}
           </Button>
         </div>

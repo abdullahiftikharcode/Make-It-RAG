@@ -1,7 +1,8 @@
 import type React from "react"
 import { ThemeProvider } from "@/components/theme-provider"
 import { ThemeProviderClient } from "@/components/theme-provider-client"
-import { Toaster } from "@/components/ui/toaster"
+// import { Toaster } from "@/components/ui/toaster"
+import { NotificationContainer } from "@/components/ui/notification-bubble"
 import "./globals.css"
 import type { Metadata } from "next"
 import { Inter } from "next/font/google"
@@ -28,7 +29,8 @@ export default function RootLayout({
             <PageTransition>
               {children}
             </PageTransition>
-            <Toaster />
+            {/* <Toaster /> */}
+            <NotificationContainer />
           </ThemeProviderClient>
         </ThemeProvider>
       </body>

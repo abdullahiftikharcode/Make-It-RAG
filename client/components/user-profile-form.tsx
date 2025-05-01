@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect, useRef } from "react"
+import React, { useState, useEffect, useRef, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -14,30 +14,64 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { Textarea } from "@/components/ui/textarea"
-import { useToast } from "@/components/ui/use-toast"
+import { useBubble } from "@/hooks/use-bubble"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+
+// Debounce function to prevent excessive state updates
+function useDebounce(value: any, delay: number) {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
+}
 
 export function UserProfileForm() {
   const [isLoading, setIsLoading] = useState(false)
   const [image, setImage] = useState<string | null>(null)
-  const [firstName, setFirstName] = useState("")
-  const [lastName, setLastName] = useState("")
-  const [email, setEmail] = useState("")
-  const [company, setCompany] = useState("")
-  const [bio, setBio] = useState("")
-  const { toast } = useToast()
+  const [formData, setFormData] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    company: "",
+    bio: ""
+  })
+  const { toast } = useBubble()
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [initialLoad, setInitialLoad] = useState(true)
 
-  // Fetch the current user details on component mount
+  // Handle input changes in a way that doesn't trigger re-renders excessively
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  }, []);
+
+  // Fetch the current user details on component mount only
   useEffect(() => {
+    let isMounted = true;
+    
     const fetchProfile = async () => {
+      if (!initialLoad) return; // Only fetch on initial load
+      
       setIsLoading(true)
       const token = localStorage.getItem("auth_token")
       if (!token) {
         toast({
-          title: "Error",
+          title: "Authentication Error",
           description: "Please log in to continue.",
           variant: "destructive",
+          duration: 5000
         })
         return
       }
@@ -52,32 +86,50 @@ export function UserProfileForm() {
         if (!response.ok) {
           throw new Error(data.error || 'Failed to fetch profile')
         }
+        
+        if (isMounted) {
         // Assuming the API returns { name, email, company, bio, image }
         // Split the full name into first and last names.
         const fullName = data.name || ""
         const [fName = "", ...rest] = fullName.split(" ")
         const lName = rest.join(" ")
-        setFirstName(fName)
-        setLastName(lName)
-        setEmail(data.email || "")
-        setCompany(data.company || "")
-        setBio(data.bio || "")
+          
+          setFormData({
+            firstName: fName,
+            lastName: lName,
+            email: data.email || "",
+            company: data.company || "",
+            bio: data.bio || ""
+          })
+          
         setImage(data.image || null)
+          setInitialLoad(false) // Mark initial load as complete
+        }
       } catch (error: any) {
+        if (isMounted) {
         toast({
-          title: "Error",
-          description: error.message,
-        })
+            title: "Error Loading Profile",
+            description: error.message || "Failed to load profile data. Please try again.",
+            variant: "destructive",
+            duration: 5000
+          })
+        }
       } finally {
+        if (isMounted) {
         setIsLoading(false)
+        }
       }
     }
 
     fetchProfile()
-  }, [toast])
+    
+    return () => {
+      isMounted = false; // Cleanup to prevent state updates after unmount
+    }
+  }, [toast, initialLoad]) // Only depend on toast and initialLoad
 
   // Handle image upload change
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
       const reader = new FileReader()
@@ -87,18 +139,26 @@ export function UserProfileForm() {
       }
       reader.readAsDataURL(file)
     }
-  }
+  }, [])
 
-  async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
+  const handleRemoveImage = useCallback(() => {
+    setImage(null)
+  }, [])
+
+  const handleChangeAvatar = useCallback(() => {
+    fileInputRef.current?.click()
+  }, [])
+
+  const onSubmit = useCallback(async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     setIsLoading(true)
 
-    const formData = {
-      firstName,
-      lastName,
-      email,
-      company,
-      bio,
+    const submitData = {
+      firstName: formData.firstName,
+      lastName: formData.lastName,
+      email: formData.email,
+      company: formData.company,
+      bio: formData.bio,
       image, // base64 encoded string (or null if no image is selected)
     }
 
@@ -118,25 +178,31 @@ export function UserProfileForm() {
           'Content-Type': 'application/json',
            Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(submitData),
       })
       const data = await response.json()
       if (!response.ok) {
         throw new Error(data.error || 'Failed to update profile')
       }
+      
+      // Update toast with proper styling and ensure content is visible
       toast({
-        title: "Profile updated",
+        title: "Success",
         description: "Your profile has been updated successfully.",
+        variant: "success",
+        duration: 3000
       })
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message,
+        description: error.message || "An error occurred while updating your profile.",
+        variant: "destructive",
+        duration: 5000
       })
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [formData, image, toast])
 
   return (
     <div className="space-y-6">
@@ -170,7 +236,7 @@ export function UserProfileForm() {
                   variant="outline"
                   type="button"
                   disabled={isLoading}
-                  onClick={() => fileInputRef.current?.click()}
+                  onClick={handleChangeAvatar}
                 >
                   Change Avatar
                 </Button>
@@ -178,7 +244,7 @@ export function UserProfileForm() {
                   variant="outline"
                   type="button"
                   disabled={isLoading}
-                  onClick={() => setImage(null)}
+                  onClick={handleRemoveImage}
                 >
                   Remove Avatar
                 </Button>
@@ -201,8 +267,8 @@ export function UserProfileForm() {
                 <Input
                   id="first-name"
                   name="firstName"
-                  value={firstName}
-                  onChange={(e) => setFirstName(e.target.value)}
+                  value={formData.firstName}
+                  onChange={handleInputChange}
                   disabled={isLoading}
                 />
               </div>
@@ -211,8 +277,8 @@ export function UserProfileForm() {
                 <Input
                   id="last-name"
                   name="lastName"
-                  value={lastName}
-                  onChange={(e) => setLastName(e.target.value)}
+                  value={formData.lastName}
+                  onChange={handleInputChange}
                   disabled={isLoading}
                 />
               </div>
@@ -224,8 +290,8 @@ export function UserProfileForm() {
                 id="email"
                 name="email"
                 type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                value={formData.email}
+                onChange={handleInputChange}
                 disabled={isLoading}
               />
             </div>
@@ -235,8 +301,8 @@ export function UserProfileForm() {
               <Input
                 id="company"
                 name="company"
-                value={company}
-                onChange={(e) => setCompany(e.target.value)}
+                value={formData.company}
+                onChange={handleInputChange}
                 disabled={isLoading}
               />
             </div>
@@ -247,8 +313,8 @@ export function UserProfileForm() {
                 id="bio"
                 name="bio"
                 placeholder="Tell us about yourself"
-                value={bio}
-                onChange={(e) => setBio(e.target.value)}
+                value={formData.bio}
+                onChange={handleInputChange}
                 disabled={isLoading}
               />
             </div>

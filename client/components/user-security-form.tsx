@@ -7,11 +7,11 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
-import { useToast } from "@/components/ui/use-toast"
+import { useBubble } from "@/hooks/use-bubble"
 
 export function UserSecurityForm() {
   const [isLoading, setIsLoading] = useState(false)
-  const { toast } = useToast()
+  const { toast } = useBubble()
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -27,9 +27,10 @@ export function UserSecurityForm() {
       const token = localStorage.getItem("auth_token")
       if (!token) {
         toast({
-          title: "Error",
+          title: "Authentication Error",
           description: "Please log in to continue.",
           variant: "destructive",
+          duration: 5000
         })
         return
       }
@@ -50,14 +51,17 @@ export function UserSecurityForm() {
       }
 
       toast({
-        title: "Password updated",
+        title: "Success",
         description: data.message || "Your password has been updated successfully.",
+        variant: "success",
+        duration: 3000
       })
     } catch (error: any) {
       toast({
-        title: "Error",
+        title: "Error Updating Password",
         description: error.message || "Failed to update password",
         variant: "destructive",
+        duration: 5000
       })
     } finally {
       setIsLoading(false)

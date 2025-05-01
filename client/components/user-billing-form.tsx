@@ -8,11 +8,11 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Separator } from "@/components/ui/separator"
-import { useToast } from "@/components/ui/use-toast"
+import { useBubble } from "@/hooks/use-bubble"
 
 export function UserBillingForm() {
   const [isLoading, setIsLoading] = useState(false)
-  const { toast } = useToast()
+  const { toast } = useBubble()
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
