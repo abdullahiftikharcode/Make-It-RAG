@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Database, Save } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
+import ReactMarkdown from "react-markdown"
+import remarkGfm from "remark-gfm"
 
 interface Message {
   id: string
@@ -435,7 +437,7 @@ export function ChatInterface({ connectionId, sessionId }: ChatInterfaceProps) {
         }
       }
   
-      // Build payload conditionally—include sessionId only if it’s valid.
+      // Build payload conditionally—include sessionId only if it's valid.
       const payload: {
         connectionId: string,
         query: string,
@@ -850,7 +852,16 @@ export function ChatInterface({ connectionId, sessionId }: ChatInterfaceProps) {
                           : "bg-card border dark:border-border"
                       }`}
                     >
-                      <p className="text-sm sm:text-base">{message.content}</p>
+                      {message.role === "user" ? (
+                        <p className="text-sm sm:text-base">{message.content}</p>
+                      ) : (
+                        <ReactMarkdown 
+                          className="text-sm sm:text-base markdown-content" 
+                          remarkPlugins={[remarkGfm]}
+                        >
+                          {message.content}
+                        </ReactMarkdown>
+                      )}
                       {message.sql && settings?.show_sql_queries && (
                         <div className="mt-2 pt-2 border-t dark:border-border text-xs sm:text-sm">
                           <p className="font-mono text-xs opacity-80">SQL Query:</p>

@@ -20,7 +20,7 @@ class PythonService {
         db_url: dbUrl,
         dialect: dialect.toUpperCase(),
         settings: {
-          query_timeout: settings?.query_timeout || 30
+          query_timeout: settings?.query_timeout || 45
         }
       };
       

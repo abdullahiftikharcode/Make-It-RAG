@@ -132,3 +132,76 @@
   @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
 }
 
+/* Markdown content styling */
+.markdown-content {
+  @apply space-y-4;
+}
+
+.markdown-content p {
+  @apply my-1;
+}
+
+.markdown-content strong {
+  @apply font-bold;
+}
+
+.markdown-content ul {
+  @apply list-disc pl-5 my-2;
+}
+
+.markdown-content ol {
+  @apply list-decimal pl-5 my-2;
+}
+
+.markdown-content li {
+  @apply mb-1;
+}
+
+.markdown-content h1 {
+  @apply text-2xl font-bold mt-4 mb-2;
+}
+
+.markdown-content h2 {
+  @apply text-xl font-bold mt-3 mb-2;
+}
+
+.markdown-content h3 {
+  @apply text-lg font-bold mt-3 mb-2;
+}
+
+.markdown-content blockquote {
+  @apply border-l-4 border-gray-300 dark:border-gray-600 pl-3 py-1 italic;
+}
+
+.markdown-content code {
+  @apply font-mono bg-gray-100 dark:bg-gray-800 text-sm p-0.5 rounded;
+}
+
+.markdown-content pre {
+  @apply bg-gray-100 dark:bg-gray-800 p-3 rounded my-2 overflow-x-auto;
+}
+
+.markdown-content pre > code {
+  @apply bg-transparent p-0;
+}
+
+.markdown-content a {
+  @apply text-blue-600 dark:text-blue-400 hover:underline;
+}
+
+.markdown-content table {
+  @apply w-full border-collapse my-2;
+}
+
+.markdown-content th, .markdown-content td {
+  @apply border border-gray-300 dark:border-gray-600 p-2 text-left;
+}
+
+.markdown-content th {
+  @apply bg-gray-100 dark:bg-gray-800;
+}
+
+.markdown-content hr {
+  @apply my-4 border-t border-gray-300 dark:border-gray-600;
+}
+

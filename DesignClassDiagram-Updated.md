@@ -1,6 +1,6 @@
 # Updated Design Class Diagram for SQL Chat Assistant
 
-## PlantUML Code with Improved Relationships
+## PlantUML Code with Current Implementation Structure
 
 ```plantuml
 @startuml SQL_Chat_Assistant_Design
@@ -11,321 +11,225 @@ skinparam monochrome true
 skinparam shadowing false
 skinparam linetype ortho
 
-' Abstract base classes
-abstract class BaseEntity {
-  - id: String
-  - createdAt: Date
-  - updatedAt: Date
-  + getId(): String
-  + getCreatedAt(): Date
-  + getUpdatedAt(): Date
-  + toJSON(): Object
-  # beforeSave(): void
+' Base class/interface
+abstract class BaseModel {
+  + find(id: String): Promise<Entity>
+  + findAll(filter?: Object): Promise<Entity[]>
+  + create(data: Object): Promise<Entity>
+  + update(id: String, data: Object): Promise<boolean>
+  + delete(id: String): Promise<boolean>
 }
 
-abstract class BaseService {
-  # logger: Logger
-  + initialize(): void
-  + handleError(error: Error): void
-  # logInfo(message: String): void
-  # logError(message: String, error: Error): void
+interface IAuthenticable {
+  + login(credentials: Object): Promise<Token>
+  + register(userData: Object): Promise<User>
+  + validateToken(token: String): Promise<boolean>
 }
 
-' Interfaces
 interface IValidator {
   + validate(data: any): Promise<boolean>
 }
 
-interface IRepository<T> {
-  + find(id: String): Promise<T>
-  + findAll(filter?: Object): Promise<T[]>
-  + create(data: Object): Promise<T>
-  + update(id: String, data: Object): Promise<boolean>
-  + delete(id: String): Promise<boolean>
+' Error handling
+class AppError {
+  - message: String
+  - statusCode: Integer
+  - details: String
+  + constructor(message, statusCode, details?)
 }
 
-' Domain entities
-class User extends BaseEntity {
+' Entity classes
+class User {
+  - id: String
   - name: String
   - email: String {unique}
   - passwordHash: String
-  - role: UserRole
+  - role: String
   - isActive: boolean
   - lastLogin: Date
-  + User(name: String, email: String, password: String)
-  + register(): Promise<boolean>
-  + login(password: String): Promise<Token>
-  + logout(): Promise<boolean>
-  + resetPassword(email: String): Promise<boolean>
-  + updateProfile(data: UserProfileData): Promise<boolean>
-  + changePassword(oldPassword: String, newPassword: String): Promise<boolean>
-  - validatePassword(password: String): boolean
+  - bio: String
+  - company: String
+  - image: Buffer
+  + findById(id: String): Promise<User>
+  + findByEmail(email: String): Promise<User>
+  + create(userData: Object): Promise<User>
+  + updateProfile(id: String, data: Object): Promise<boolean>
+  + updatePassword(id: String, passwordHash: String): Promise<boolean>
+  + updateLastLogin(id: String): Promise<void>
 }
 
-enum UserRole {
-  USER
-  ADMIN
-}
-
-class DatabaseConnection extends BaseEntity {
+class DatabaseConnection {
+  - id: String
   - userId: String
   - name: String
-  - type: ConnectionType
-  - connectionString: String {encrypted}
+  - type: String
+  - connectionString: String
   - isActive: boolean
   - lastUsed: Date
-  + DatabaseConnection(userId: String, name: String, type: ConnectionType, connectionString: String)
-  + testConnection(): Promise<boolean>
-  + connect(): Promise<Connection>
-  + disconnect(): Promise<boolean>
-  + getSchema(): Promise<Schema>
-  + save(): Promise<boolean>
-  + update(data: ConnectionData): Promise<boolean>
-  + delete(): Promise<boolean>
-  - encryptConnectionString(connectionString: String): String
-  - decryptConnectionString(encrypted: String): String
+  + findById(id: String, userId: String): Promise<Connection>
+  + findAllByUser(userId: String): Promise<Connection[]>
+  + findRecentByUser(userId: String, limit: Number): Promise<Connection[]>
+  + create(data: Object, userId: String): Promise<Connection>
+  + delete(id: String, userId: String): Promise<boolean>
+  + updateStatus(id: String, userId: String, isActive: boolean): Promise<boolean>
+  + updateLastUsed(id: String): Promise<void>
 }
 
-enum ConnectionType {
-  POSTGRESQL
-  MYSQL
-  SQLSERVER
-}
-
-class ChatSession extends BaseEntity {
+class ChatSession {
+  - id: String
   - userId: String
   - connectionId: String
   - title: String
-  - messages: ChatMessage[]
-  + ChatSession(userId: String, connectionId: String, title: String)
-  + create(): Promise<boolean>
-  + getMessages(): Promise<ChatMessage[]>
-  + addMessage(content: String, role: MessageRole, sqlQuery?: String): Promise<boolean>
-  + updateTitle(title: String): Promise<boolean>
-  + delete(): Promise<boolean>
-  + export(): Promise<File>
+  - createdAt: Date
+  - updatedAt: Date
+  + findSessionById(id: String, userId: String): Promise<ChatSession>
+  + findAllByUser(userId: String): Promise<ChatSession[]>
+  + findByConnection(connectionId: String, userId: String): Promise<ChatSession[]>
+  + createSession(data: Object, userId: String): Promise<ChatSession>
+  + addMessage(sessionId: String, data: Object): Promise<ChatMessage>
+  + addRawMessage(sessionId: String, role: String, content: String, sqlQuery: String): Promise<ChatMessage>
+  + deleteSession(id: String, userId: String): Promise<boolean>
+  + findRecentByUser(userId: String, limit: Number): Promise<ChatSession[]>
+  + findAllChats(userId: String): Promise<ChatSession[]>
 }
 
-class ChatMessage extends BaseEntity {
+class ChatMessage {
+  - id: String
   - sessionId: String
-  - role: MessageRole
+  - role: String
   - content: String
   - sqlQuery: String
-  + ChatMessage(sessionId: String, role: MessageRole, content: String, sqlQuery?: String)
-  + save(): Promise<boolean>
-  + delete(): Promise<boolean>
-  + generateResponse(): Promise<String>
+  - timestamp: Date
+  + findBySession(sessionId: String): Promise<ChatMessage[]>
+  + create(messageData: Object): Promise<ChatMessage>
+  + deleteBySession(sessionId: String): Promise<boolean>
 }
 
-enum MessageRole {
-  USER
-  ASSISTANT
-  SYSTEM
-}
-
-class UserSettings extends BaseEntity {
+class UserSettings {
   - userId: String
   - queryTimeout: Integer
   - autoDisconnect: boolean
   - showSqlQueries: boolean
-  - theme: ThemeType
-  + UserSettings(userId: String)
-  + save(): Promise<boolean>
-  + update(settings: SettingsData): Promise<boolean>
-  + getSettings(): Promise<UserSettings>
+  - theme: String
+  + findByUser(userId: String): Promise<UserSettings>
+  + create(userId: String): Promise<UserSettings>
+  + update(userId: String, data: Object): Promise<boolean>
 }
 
-enum ThemeType {
-  LIGHT
-  DARK
-  SYSTEM
-}
-
-' Service classes
-class AuthenticationManager extends BaseService {
-  - userRepository: UserRepository
-  - jwtSecret: String
-  - privateKey: String
-  - publicKey: String
-  - tokenExpiry: Integer
-  + generateToken(userId: String): Promise<Token>
-  + verifyToken(token: String): Promise<TokenPayload>
-  + refreshToken(token: String): Promise<Token>
-  + revokeToken(token: String): Promise<boolean>
-  + hashPassword(password: String): Promise<String>
-  + verifyPassword(hashedPassword: String, password: String): Promise<boolean>
-  - signJWT(payload: Object): String
-  - verifyJWT(token: String): TokenPayload
-}
-
-class SchemaVisualizer extends BaseService {
-  - connectionId: String
-  - tables: Table[]
-  - relationships: Relation[]
-  + fetchSchema(connectionId: String): Promise<Schema>
-  + renderTables(): Promise<Component>
-  + showRelationships(): Promise<Component>
-  + getTableDetails(tableName: String): Promise<Table>
-  + updateSchema(): Promise<boolean>
-  - extractRelationships(schema: Schema): Relation[]
-  - formatTableStructure(table: Table): TableComponent
-}
-
-class QueryProcessor extends BaseService implements IValidator {
-  - apiKey: String
-  - queryValidator: QueryValidator
-  - sqlGenerator: SQLGenerator
-  + processQuery(query: String, schema: Schema): Promise<SQL>
-  + validateQuery(query: String): Promise<boolean>
-  + generateSQL(query: String, schema: Schema): Promise<String>
-  + verifySQL(sql: String, query: String): Promise<boolean>
-  + optimizeQuery(sql: String): Promise<String>
-  - preparePrompt(query: String, schema: Schema): String
-  - postprocessSQL(sql: String): String
-}
-
-class QueryExecutor {
-  - connectionId: String
-  - sql: String
-  - timeout: Integer
-  - connection: Connection
-  + execute(sql: String, params?: Object): Promise<QueryResult>
-  + validateSyntax(sql: String): Promise<boolean>
-  + formatResults(results: QueryResult): Promise<Object>
-  + trackPerformance(queryId: String): Promise<Stats>
-  + handleError(error: Error): Promise<Error>
-  - prepareStatement(sql: String, params: Object): PreparedStatement
-  - cleanSQLQuery(query: String): String
-}
-
-class QueryLogger extends BaseEntity implements IRepository<QueryLog> {
+class QueryLog {
+  - id: String
   - userId: String
   - connectionId: String
   - query: String
   - executionTime: Integer
-  - status: QueryStatus
+  - status: String
   - errorMessage: String
-  + logQuery(query: String, executionTime: Integer, status: QueryStatus): Promise<boolean>
-  + getStats(userId: String): Promise<Statistics>
-  + searchLogs(criteria: SearchCriteria): Promise<QueryLog[]>
-  + exportLogs(format: ExportFormat): Promise<File>
-  - formatLogEntry(log: QueryLog): FormattedLog
+  - createdAt: Date
+  + logQuery(userId: String, connectionId: String, query: String, executionTime: Integer, status: String, error?: String): Promise<boolean>
+  + findByUser(userId: String, limit: Number): Promise<QueryLog[]>
 }
 
-enum QueryStatus {
-  SUCCESS
-  ERROR
+' Service classes
+class AuthService implements IAuthenticable {
+  - userModel: User
+  - jwtConfig: Object
+  + register(userData: Object): Promise<Object>
+  + login(credentials: Object): Promise<Object>
+  + changePassword(userId: String, passwordData: Object): Promise<Object>
+  + generateToken(user: User): String
+  + validateToken(token: String): Object
 }
 
-' Repositories
-class UserRepository implements IRepository<User> {
-  + find(id: String): Promise<User>
-  + findByEmail(email: String): Promise<User>
-  + findAll(filter?: Object): Promise<User[]>
-  + create(data: Object): Promise<User>
-  + update(id: String, data: Object): Promise<boolean>
-  + delete(id: String): Promise<boolean>
+class ConnectionService {
+  - connectionModel: DatabaseConnection
+  - pythonService: PythonService
+  + getConnections(userId: String): Promise<Connection[]>
+  + getConnection(id: String, userId: String): Promise<Connection>
+  + createConnection(data: Object, userId: String): Promise<Connection>
+  + deleteConnection(id: String, userId: String): Promise<boolean>
+  + testConnection(connectionData: Object): Promise<boolean>
+  + getDatabaseSchema(connectionId: String, userId: String): Promise<Schema>
 }
 
-class ConnectionRepository implements IRepository<DatabaseConnection> {
-  + find(id: String): Promise<DatabaseConnection>
-  + findByUser(userId: String): Promise<DatabaseConnection[]>
-  + findAll(filter?: Object): Promise<DatabaseConnection[]>
-  + create(data: Object): Promise<DatabaseConnection>
-  + update(id: String, data: Object): Promise<boolean>
-  + delete(id: String): Promise<boolean>
+class ChatService {
+  - chatSessionModel: ChatSession
+  - chatMessageModel: ChatMessage
+  - connectionService: ConnectionService
+  - pythonService: PythonService
+  + getMessages(sessionId: String): Promise<ChatMessage[]>
+  + createSession(userId: String, connectionId: String, title: String): Promise<ChatSession>
+  + saveMessage(sessionId: String, message: Object): Promise<ChatMessage>
+  + processQuery(sessionId: String, query: String): Promise<Object>
+  + getSessions(userId: String): Promise<ChatSession[]>
+  + getSession(id: String, userId: String): Promise<ChatSession>
+  + deleteSession(id: String, userId: String): Promise<boolean>
 }
 
-' Inheritance relationships
-BaseEntity <|-- User
-BaseEntity <|-- DatabaseConnection
-BaseEntity <|-- ChatSession
-BaseEntity <|-- ChatMessage
-BaseEntity <|-- UserSettings
-BaseEntity <|-- QueryLogger
+class PythonService {
+  - apiUrl: String
+  + generateSQL(query: String, dbUrl: String, dialect: String, settings: Object): Promise<Object>
+  + getSchema(dbUrl: String): Promise<Object>
+  + checkHealth(): Promise<boolean>
+}
 
-BaseService <|-- AuthenticationManager
-BaseService <|-- SchemaVisualizer
-BaseService <|-- QueryProcessor
+class UserService {
+  - userModel: User
+  - settingsModel: UserSettings
+  + getUserProfile(userId: String): Promise<User>
+  + updateUserProfile(userId: String, data: Object): Promise<boolean>
+  + getUserSettings(userId: String): Promise<UserSettings>
+  + updateUserSettings(userId: String, data: Object): Promise<boolean>
+}
 
-IValidator <|.. QueryProcessor
-IRepository <|.. UserRepository
-IRepository <|.. ConnectionRepository
-IRepository <|.. QueryLogger
+class DashboardService {
+  - userModel: User
+  - connectionModel: DatabaseConnection
+  - chatSessionModel: ChatSession
+  + getStats(userId: String): Promise<Object>
+  + getRecentConnections(userId: String): Promise<Connection[]>
+  + getRecentChats(userId: String): Promise<ChatSession[]>
+}
 
-' Enumeration type relationships
-User "1" --> "1" UserRole : uses >
-DatabaseConnection "1" --> "1" ConnectionType : uses >
-ChatMessage "1" --> "1" MessageRole : uses >
-UserSettings "1" --> "1" ThemeType : uses >
-QueryLogger "1" --> "1" QueryStatus : uses >
+' Python Classes
+class SQLService {
+  - apiKey: String
+  + validate_query(query: String, table_structure: Object): boolean
+  + generate_sql(query: String, table_structure: Object, dialect: String): Object
+  + get_database_schema(db_url: String): Object
+  + execute_query(db_url: String, sql_query: String): [columns, data]
+}
 
-' Unidirectional associations with full multiplicity on both sides
-User "1" --> "0..*" DatabaseConnection : manages >
-DatabaseConnection "0..*" --> "1" User : belongs to >
+class NLPService {
+  - apiKey: String
+  + generate_natural_language_response(user_query: String, columns: Array, data: Array): String
+}
 
-User "1" --> "0..*" ChatSession : owns >
-ChatSession "0..*" --> "1" User : belongs to >
+' Relationships
+User --o DatabaseConnection : has many >
+User --o ChatSession : has many >
+User --o UserSettings : has one >
+User --o QueryLog : has many >
+DatabaseConnection --o ChatSession : has many >
+DatabaseConnection --o QueryLog : has many >
+ChatSession --o ChatMessage : has many >
 
-DatabaseConnection "1" --> "0..*" ChatSession : used in >
-ChatSession "0..*" --> "1" DatabaseConnection : uses >
+AuthService --> User : uses >
+ConnectionService --> DatabaseConnection : uses >
+ConnectionService --> PythonService : uses >
+ChatService --> ChatSession : uses >
+ChatService --> ChatMessage : uses >
+ChatService --> ConnectionService : uses >
+ChatService --> PythonService : uses >
+UserService --> User : uses >
+UserService --> UserSettings : uses >
+DashboardService --> User : uses >
+DashboardService --> DatabaseConnection : uses >
+DashboardService --> ChatSession : uses >
 
-QueryProcessor "1" --> "1" QueryExecutor : uses >
-QueryExecutor "1" --> "1" QueryProcessor : used by >
-
-QueryExecutor "1" --> "1" QueryLogger : logs with >
-QueryLogger "1" --> "1" QueryExecutor : records for >
-
-UserRepository "1" --> "0..*" User : manages >
-User "0..*" --> "1" UserRepository : managed by >
-
-ConnectionRepository "1" --> "0..*" DatabaseConnection : manages >
-DatabaseConnection "0..*" --> "1" ConnectionRepository : managed by >
-
-' Bidirectional associations with full multiplicity
-DatabaseConnection "1" <--> "1" SchemaVisualizer : visualizes
-AuthenticationManager "1" <--> "1" User : authenticates
-
-' Composition with full multiplicity
-User "1" *-- "1" UserSettings : settings
-UserSettings "1" --* "1" User : belongs to
-
-ChatSession "1" *-- "0..*" ChatMessage : messages
-ChatMessage "0..*" --* "1" ChatSession : part of
-
-' Aggregation with full multiplicity
-User "1" o-- "0..*" QueryLogger : logs
-QueryLogger "0..*" --o "1" User : logged by
-
-DatabaseConnection "1" o-- "1" QueryExecutor : executes
-QueryExecutor "1" --o "1" DatabaseConnection : executes for
+PythonService ..> SQLService : HTTP calls >
+PythonService ..> NLPService : HTTP calls >
 
 @enduml
 ```
 
-## Key Improvements
-
-1. **Complete Multiplicity Notation**:
-   - Added multiplicity to both ends of EVERY relationship
-   - For each association, explicitly shows cardinality on both sides
-   - Also added relationship directions from the reverse perspective
-
-2. **Enumeration Type Relationships**:
-   - Added clear "1-to-1" multiplicity to enum relationships
-   - Connected all enum types to their respective classes
-
-3. **Bidirectional Relationships**:
-   - Now properly shows multiplicity on both sides
-   - Shows composition and aggregation in both directions
-
-4. **Relationship Descriptions**:
-   - Added descriptive text to opposite ends of relationships
-   - For example: "manages" from User to DatabaseConnection, and "belongs to" from DatabaseConnection to User
-
-## How to Use
-
-1. Copy the PlantUML code above
-2. Paste it into the [PlantUML Online Server](https://www.plantuml.com/plantuml/uml/)
-3. The diagram will render with full multiplicity on all relationships
-
-This updated diagram now strictly follows UML best practices by showing multiplicity on both sides of every relationship, making the model more precise and complete. 
+This updated design class diagram comprehensively reflects the actual implementation of your SQL Chat Assistant, showing all entities and services with their relationships and key methods based on the current codebase. 

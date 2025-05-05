@@ -14,7 +14,7 @@ const config = {
   
   // Python service configuration
   pythonServiceUrl: process.env.PYTHON_SERVICE_URL || 'http://localhost:8000',
-  pythonServiceTimeout: process.env.PYTHON_SERVICE_TIMEOUT || 20000,
+  pythonServiceTimeout: process.env.PYTHON_SERVICE_TIMEOUT || 60000,
   
   // Database configuration (referenced from database.js)
   
