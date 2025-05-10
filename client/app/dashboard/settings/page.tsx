@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useToast } from "@/components/ui/use-toast"
+import { toast } from "sonner"
 import { Sun, Moon, Monitor } from "lucide-react"
 
 interface UserSettings {
@@ -330,40 +331,7 @@ export default function SettingsPage() {
               <CardDescription>Manage your API keys for programmatic access to the platform.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label>Your API Key</Label>
-                <div className="flex space-x-2">
-                  <Input
-                    value="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"
-                    type="password"
-                    readOnly
-                  />
-                  <Button variant="outline">Copy</Button>
-                  <Button variant="outline" className="text-destructive">
-                    Revoke
-                  </Button>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  This key was created on October 12, 2023. It has never been used.
-                </p>
-              </div>
-
-              <div className="pt-4">
-                <Button>Generate New API Key</Button>
-              </div>
-
-              <div className="pt-6 border-t">
-                <h3 className="text-lg font-medium mb-2">API Usage</h3>
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">This Month</span>
-                    <span>1,234 / 10,000 requests</span>
-                  </div>
-                  <div className="h-2 bg-muted rounded-full overflow-hidden">
-                    <div className="h-full bg-primary w-[12%]" />
-                  </div>
-                </div>
-              </div>
+              <ApiKeyManager />
             </CardContent>
             <CardFooter className="flex flex-col items-start gap-4">
               <p className="text-sm text-muted-foreground">
@@ -376,5 +344,400 @@ export default function SettingsPage() {
       </Tabs>
     </DashboardShell>
   )
+}
+
+// Create a separate component for API Key management
+function ApiKeyManager() {
+  const [apiKeys, setApiKeys] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [showNewKeyValue, setShowNewKeyValue] = useState<{key: string, show: boolean} | null>(null);
+  const [newKeyName, setNewKeyName] = useState('');
+  const [error, setError] = useState('');
+  const { toast: shadcnToast } = useToast();
+
+  // Load API keys on component mount
+  useEffect(() => {
+    loadApiKeys();
+  }, []);
+
+  // Function to load API keys
+  const loadApiKeys = async () => {
+    setIsLoading(true);
+    try {
+      const token = localStorage.getItem("auth_token");
+      if (!token) {
+        setError('You need to be logged in to manage API keys');
+        return;
+      }
+
+      const response = await fetch('http://localhost:3001/api/api-keys', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to load API keys');
+      }
+
+      const data = await response.json();
+      // Use the data directly from the server - no need for processing
+      setApiKeys(data);
+    } catch (err) {
+      setError('Failed to load API keys');
+      console.error('Error loading API keys:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Function to generate a new API key
+  const generateNewKey = async () => {
+    if (!newKeyName.trim()) {
+      toast.error("Please provide a name for your API key", {
+        position: "top-right",
+        duration: 3000,
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const token = localStorage.getItem("auth_token");
+      if (!token) {
+        setError('You need to be logged in to generate API keys');
+        return;
+      }
+
+      const response = await fetch('http://localhost:3001/api/api-keys', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ name: newKeyName }),
+      });
+
+      // Get response data even if the response is not OK, as it may contain error details
+      const data = await response.json();
+
+      if (!response.ok) {
+        // Extract more specific error message from the response
+        const errorMessage = data.error || data.message || data.details || 'Failed to generate API key';
+        throw new Error(errorMessage);
+      }
+      
+      // Show the full key to the user (only once)
+      setShowNewKeyValue({ key: data.api_key, show: true });
+      setNewKeyName('');
+      
+      // Reload the API keys list
+      loadApiKeys();
+      
+      toast.success("New API key created. Make sure to copy it now, you won't be able to see it again.", {
+        position: "top-right",
+        duration: 5000,
+      });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to generate API key", {
+        position: "top-right",
+        duration: 3000,
+      });
+      console.error('Error generating API key:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Function to revoke (delete) an API key
+  const revokeKey = async (keyId: string) => {
+    if (!confirm('Are you sure you want to revoke this API key? This action cannot be undone.')) {
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const token = localStorage.getItem("auth_token");
+      if (!token) {
+        setError('You need to be logged in to revoke API keys');
+        return;
+      }
+
+      const response = await fetch(`http://localhost:3001/api/api-keys/${keyId}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to revoke API key');
+      }
+
+      // Reload the API keys list
+      loadApiKeys();
+      
+      toast.success("API key revoked successfully", {
+        position: "top-right",
+        duration: 3000,
+      });
+    } catch (err) {
+      toast.error("Failed to revoke API key", {
+        position: "top-right",
+        duration: 3000,
+      });
+      console.error('Error revoking API key:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Function to copy API key to clipboard
+  const copyToClipboard = (text: string) => {
+    // Try the modern clipboard API first
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(text)
+        .then(() => {
+          // Use sonner toast for better visibility
+          toast.success("API key copied to clipboard", {
+            position: "top-right",
+            duration: 3000,
+            style: {
+              background: "green",
+              color: "white",
+              border: "none"
+            },
+          });
+        })
+        .catch(err => {
+          console.error('Failed to copy:', err);
+          // Fallback method using document.execCommand
+          fallbackCopyToClipboard(text);
+        });
+    } else {
+      // Use fallback for non-secure contexts
+      fallbackCopyToClipboard(text);
+    }
+  };
+
+  // Fallback clipboard method for browsers that don't support clipboard API
+  const fallbackCopyToClipboard = (text: string) => {
+    try {
+      // Create a temporary textarea element
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+      
+      // Make the textarea out of viewport
+      textArea.style.position = 'fixed';
+      textArea.style.left = '-999999px';
+      textArea.style.top = '-999999px';
+      document.body.appendChild(textArea);
+      
+      // Select and copy
+      textArea.focus();
+      textArea.select();
+      const success = document.execCommand('copy');
+      document.body.removeChild(textArea);
+      
+      if (success) {
+        toast.success("API key copied to clipboard", {
+          position: "top-right",
+          duration: 3000,
+          style: {
+            background: "green",
+            color: "white",
+            border: "none"
+          },
+        });
+      } else {
+        throw new Error('Copy command failed');
+      }
+    } catch (err) {
+      console.error('Fallback copy method failed:', err);
+      toast.error("Failed to copy to clipboard. Please select and copy manually.", {
+        position: "top-right",
+        duration: 5000,
+      });
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Error message */}
+      {error && (
+        <div className="bg-destructive/20 text-destructive p-4 rounded-md mb-4">
+          {error}
+        </div>
+      )}
+
+      {/* New API key section */}
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="new-key-name">Create New API Key</Label>
+          <div className="flex space-x-2">
+            <Input
+              id="new-key-name"
+              placeholder="API key name"
+              value={newKeyName}
+              onChange={(e) => setNewKeyName(e.target.value)}
+              disabled={isLoading}
+            />
+            <Button 
+              onClick={generateNewKey} 
+              disabled={isLoading || !newKeyName.trim()}
+            >
+              Generate
+            </Button>
+          </div>
+        </div>
+
+        {/* Display newly generated key */}
+        {showNewKeyValue && (
+          <div className="border p-4 rounded-md bg-muted/50">
+            <p className="font-medium mb-2">Your new API key (copy it now, you won't see it again):</p>
+            <div className="flex space-x-2 mb-2">
+              <Input
+                value={showNewKeyValue.key}
+                readOnly
+                type={showNewKeyValue.show ? "text" : "password"}
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowNewKeyValue({
+                  ...showNewKeyValue,
+                  show: !showNewKeyValue.show
+                })}
+              >
+                {showNewKeyValue.show ? "Hide" : "Show"}
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => {
+                  copyToClipboard(showNewKeyValue.key);
+                  // Add visual feedback for the button
+                  const btn = document.activeElement as HTMLButtonElement;
+                  if (btn) {
+                    const originalText = btn.textContent || 'Copy';
+                    btn.textContent = 'Copied!';
+                    btn.classList.add('bg-primary', 'text-primary-foreground');
+                    setTimeout(() => {
+                      btn.textContent = originalText;
+                      btn.classList.remove('bg-primary', 'text-primary-foreground');
+                    }, 1000);
+                  }
+                }}
+              >
+                Copy
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              This key will only be displayed once. If you lose it, you'll need to generate a new one.
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* API keys list */}
+      <div className="space-y-2">
+        <h3 className="text-lg font-medium">Your API Keys</h3>
+        
+        {isLoading ? (
+          <div className="flex justify-center p-4">
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+          </div>
+        ) : apiKeys.length === 0 ? (
+          <p className="text-sm text-muted-foreground py-4">
+            You don't have any API keys yet. Generate one using the form above.
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {apiKeys.map((key) => (
+              <div key={key.id} className="border rounded-md p-4">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h4 className="font-medium">{key.name}</h4>
+                    <p className="text-sm text-muted-foreground">
+                      Created: {new Date(key.created_date).toLocaleDateString()}
+                    </p>
+                    {key.last_used_date && (
+                      <p className="text-xs text-muted-foreground">
+                        Last used: {new Date(key.last_used_date).toLocaleString()}
+                      </p>
+                    )}
+                    <div className="mt-1 flex items-center">
+                      <code className="text-xs bg-muted px-1 py-0.5 rounded">
+                        {key.display_key || key.api_key}
+                      </code>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 ml-2"
+                        onClick={(e) => {
+                          // Use the full key for copying
+                          copyToClipboard(key.api_key);
+                          // Add visual feedback
+                          const btn = e.currentTarget;
+                          const originalText = btn.textContent || 'Copy';
+                          btn.textContent = 'Copied!';
+                          btn.classList.add('bg-muted', 'text-primary');
+                          setTimeout(() => {
+                            btn.textContent = originalText;
+                            btn.classList.remove('bg-muted', 'text-primary');
+                          }, 1000);
+                        }}
+                      >
+                        Copy
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="flex items-center">
+                    {key.revoked_date ? (
+                      <span className="text-xs bg-destructive/20 text-destructive px-2 py-1 rounded">
+                        Revoked
+                      </span>
+                    ) : (
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => revokeKey(key.id)}
+                        disabled={isLoading}
+                      >
+                        Revoke
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* API usage section */}
+      <div className="pt-6 border-t">
+        <h3 className="text-lg font-medium mb-2">API Usage</h3>
+        {apiKeys.length > 0 ? (
+          <div className="space-y-2">
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">This Month</span>
+              <span>0 / 10,000 requests</span>
+            </div>
+            <div className="h-2 bg-muted rounded-full overflow-hidden">
+              <div className="h-full bg-primary w-[0%]" />
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Your API usage is reset on the 1st of each month.
+            </p>
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            Generate an API key to view usage statistics.
+          </p>
+        )}
+      </div>
+    </div>
+  );
 }
 

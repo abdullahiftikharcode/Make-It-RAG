@@ -1,4 +1,3 @@
-
 CREATE TABLE users (
     id VARCHAR(36) PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
@@ -69,4 +68,28 @@ CREATE TABLE query_logs (
     INDEX idx_user_id (user_id),
     INDEX idx_connection_id (connection_id),
     INDEX idx_created_at (created_at)
+);
+CREATE TABLE api_keys (
+    id VARCHAR(36) PRIMARY KEY,
+    user_id VARCHAR(36) NOT NULL,
+    api_key VARCHAR(64) NOT NULL UNIQUE,
+    name VARCHAR(255) NOT NULL,
+    is_active BOOLEAN DEFAULT TRUE,
+    last_used TIMESTAMP NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    revoked_at TIMESTAMP NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_user_id (user_id),
+    INDEX idx_api_key (api_key)
+);
+CREATE TABLE api_usage (
+    id VARCHAR(36) PRIMARY KEY,
+    api_key_id VARCHAR(36) NOT NULL,
+    endpoint VARCHAR(255) NOT NULL,
+    request_method VARCHAR(10) NOT NULL,
+    status_code INT NOT NULL,
+    requested_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (api_key_id) REFERENCES api_keys(id) ON DELETE CASCADE,
+    INDEX idx_api_key_id (api_key_id),
+    INDEX idx_requested_at (requested_at)
 );

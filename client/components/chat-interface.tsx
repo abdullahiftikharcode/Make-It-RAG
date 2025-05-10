@@ -853,7 +853,7 @@ export function ChatInterface({ connectionId, sessionId }: ChatInterfaceProps) {
                       }`}
                     >
                       {message.role === "user" ? (
-                        <p className="text-sm sm:text-base">{message.content}</p>
+                      <p className="text-sm sm:text-base">{message.content}</p>
                       ) : (
                         <ReactMarkdown 
                           className="text-sm sm:text-base markdown-content" 

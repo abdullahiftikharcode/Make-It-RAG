@@ -17,6 +17,7 @@ const { checkPythonServiceHealth } = require('./utils/python-health');
 
 // Import middleware
 const { errorHandler } = require('./middleware/error');
+const { apiKeyAuth } = require('./middleware/api-auth');
 
 // Import routes
 const authRoutes = require('./routes/auth');
@@ -26,6 +27,7 @@ const profileRoutes = require('./routes/profile');
 const settingsRoutes = require('./routes/settings');
 const dashboardRoutes = require('./routes/dashboard');
 const chatSessionsRoutes = require('./routes/chat-sessions');
+const apiKeysRoutes = require('./routes/apikeys');
 
 // Initialize app configurations
 if (!config.init()) {
@@ -40,6 +42,9 @@ const app = express();
 app.use(cors());
 app.use(bodyParser.json({ limit: '50mb' }));
 app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
+
+// Apply API key authentication (non-blocking) to all routes
+app.use(apiKeyAuth);
 
 // MySQL connection
 const db = mysql.createConnection({
@@ -59,6 +64,15 @@ db.connect((err) => {
 
 // Middleware to verify JWT token
 const verifyToken = (req, res, next) => {
+  // Skip token verification if already authenticated via API key
+  if (req.apiAuth && req.apiAuth.authenticated) {
+    // Set user information from the API key
+    req.user = {
+      userId: req.apiAuth.userId
+    };
+    return next();
+  }
+
   const authHeader = req.headers.authorization;
   if (!authHeader) {
     return res.status(401).json({ error: 'No token provided' });
@@ -66,7 +80,7 @@ const verifyToken = (req, res, next) => {
 
   const token = authHeader.split(' ')[1];
   try {
-    const decoded = jwt.verify(token, config.jwt.privateKey, { algorithms: ['RS256'] });
+    const decoded = jwt.verify(token, config.jwtPrivateKey, { algorithms: ['RS256'] });
     req.user = decoded;
     next();
   } catch (err) {
@@ -83,9 +97,29 @@ app.use('/api/profile', profileRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/chat-sessions', chatSessionsRoutes);
+app.use('/api/api-keys', apiKeysRoutes); // Register API key routes
 
 // Map the /api/change-password to the auth routes' change-password endpoint
 app.use('/api', authRoutes);
+
+// Add a test endpoint for API key authentication
+app.get('/api/api-test', (req, res) => {
+  // Check if authenticated via API key
+  if (req.apiAuth && req.apiAuth.authenticated) {
+    return res.json({
+      success: true,
+      message: 'API key authentication successful',
+      userId: req.apiAuth.userId,
+      keyId: req.apiAuth.keyId
+    });
+  }
+  
+  // Not authenticated with API key
+  res.status(401).json({
+    error: 'Unauthorized',
+    message: 'Valid API key required'
+  });
+});
 
 // Legacy endpoint for schema (redirect to new endpoint)
 app.get('/api/schema/:connectionId', (req, res) => {
