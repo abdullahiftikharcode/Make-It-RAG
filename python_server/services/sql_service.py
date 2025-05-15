@@ -1,5 +1,6 @@
 from python_server.components.sql_components import build_pipeline, QueryValidator
 from python_server.utils.sql_utils import get_db_schema, execute_sql_query
+from typing import Optional, Dict, Any
 
 class SQLService:
     """Service for SQL generation and execution."""
@@ -13,22 +14,23 @@ class SQLService:
         """
         self.api_key = api_key
         
-    def validate_query(self, query: str, table_structure: dict) -> bool:
+    def validate_query(self, query: str, table_structure: dict, model: Optional[str] = None) -> bool:
         """
         Validate if a natural language query is related to a database schema.
         
         Args:
             query: Natural language query
             table_structure: Database schema as dictionary
+            model: Optional model name to use
             
         Returns:
             Boolean indicating query validity
         """
         validator = QueryValidator(api_key=self.api_key)
-        valid_result, _ = validator.run(query=query, table_structure=table_structure)
+        valid_result, _ = validator.run(query=query, table_structure=table_structure, model=model)
         return valid_result["is_valid"]
         
-    def generate_sql(self, query: str, table_structure: dict, dialect: str = "generic SQL"):
+    def generate_sql(self, query: str, table_structure: dict, dialect: str = "generic SQL", model: Optional[str] = None):
         """
         Generate SQL from natural language.
         
@@ -36,6 +38,7 @@ class SQLService:
             query: Natural language query
             table_structure: Database schema as dictionary
             dialect: SQL dialect to use
+            model: Optional model name to use
             
         Returns:
             Generated SQL query or error message
@@ -44,8 +47,8 @@ class SQLService:
         result = pipeline.run(
             query=query,
             params={
-                "QueryValidator": {"table_structure": table_structure},
-                "AgenticSQLGenerator": {"table_structure": table_structure, "dialect": dialect}
+                "QueryValidator": {"table_structure": table_structure, "model": model},
+                "AgenticSQLGenerator": {"table_structure": table_structure, "dialect": dialect, "model": model}
             }
         )
         

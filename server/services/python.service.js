@@ -24,6 +24,11 @@ class PythonService {
         }
       };
       
+      // Add model selection if provided
+      if (settings?.model) {
+        pythonRequest.settings.model = settings.model;
+      }
+      
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), config.pythonServiceTimeout);
       

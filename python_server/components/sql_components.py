@@ -2,6 +2,7 @@ import json
 import google.generativeai as genai
 from haystack.nodes import BaseComponent
 from haystack.pipelines import Pipeline
+from typing import Optional, Dict, Any, List
 
 from python_server.config.config import (
     GEMINI_MODEL, 
@@ -19,13 +20,14 @@ class QueryValidator(BaseComponent):
     def __init__(self, api_key: str):
         genai.configure(api_key=api_key)
         
-    def run(self, query: str, table_structure: dict, **kwargs):
+    def run(self, query: str, table_structure: dict, model: Optional[str] = None, **kwargs):
         """
         Validate if the query is related to the table structure.
         
         Args:
             query: Natural language query
             table_structure: Database schema as dictionary
+            model: Optional model name to use, defaults to config value
             
         Returns:
             Dictionary with is_valid boolean flag
@@ -39,8 +41,9 @@ class QueryValidator(BaseComponent):
             f"{query}\n"
         )
         
-        model = genai.GenerativeModel(GEMINI_MODEL)
-        response = model.generate_content(prompt)
+        model_name = model if model else GEMINI_MODEL
+        model_instance = genai.GenerativeModel(model_name)
+        response = model_instance.generate_content(prompt)
         answer = response.text.strip().lower()
         is_valid = "true" in answer
         
@@ -63,7 +66,7 @@ class GeminiSQLGenerator(BaseComponent):
     def __init__(self, api_key: str):
         genai.configure(api_key=api_key)
         
-    def run(self, query: str, table_structure: dict, dialect: str = "generic SQL", **kwargs):
+    def run(self, query: str, table_structure: dict, dialect: str = "generic SQL", model: Optional[str] = None, **kwargs):
         """
         Generate SQL query from natural language.
         
@@ -71,6 +74,7 @@ class GeminiSQLGenerator(BaseComponent):
             query: Natural language query
             table_structure: Database schema as dictionary
             dialect: SQL dialect to use
+            model: Optional model name to use, defaults to config value
             
         Returns:
             Dictionary with generated SQL query
@@ -84,8 +88,9 @@ class GeminiSQLGenerator(BaseComponent):
             "Generate the corresponding SQL query:"
         )
         
-        model = genai.GenerativeModel(GEMINI_MODEL)
-        response = model.generate_content(system_prompt)
+        model_name = model if model else GEMINI_MODEL
+        model_instance = genai.GenerativeModel(model_name)
+        response = model_instance.generate_content(system_prompt)
         sql_query = response.text.strip()
         sql_query = remove_markdown_code_fence(sql_query)
         
@@ -108,7 +113,7 @@ class QueryVerifier(BaseComponent):
     def __init__(self, api_key: str):
         genai.configure(api_key=api_key)
         
-    def run(self, sql_query: str, user_query: str, table_structure: dict, dialect: str = "generic SQL", **kwargs):
+    def run(self, sql_query: str, user_query: str, table_structure: dict, dialect: str = "generic SQL", model: Optional[str] = None, **kwargs):
         """
         Verify if the generated SQL query is correct.
         
@@ -117,6 +122,7 @@ class QueryVerifier(BaseComponent):
             user_query: Original natural language query
             table_structure: Database schema as dictionary
             dialect: SQL dialect used
+            model: Optional model name to use, defaults to config value
             
         Returns:
             Dictionary with is_valid boolean flag
@@ -135,8 +141,9 @@ class QueryVerifier(BaseComponent):
                 f"{sql_query}\n"
             )
             
-            model = genai.GenerativeModel(GEMINI_MODEL)
-            response = model.generate_content(prompt)
+            model_name = model if model else GEMINI_MODEL
+            model_instance = genai.GenerativeModel(model_name)
+            response = model_instance.generate_content(prompt)
             answer = response.text.strip().lower()
             
             if "false" in answer:
@@ -166,7 +173,7 @@ class AgenticSQLGenerator(BaseComponent):
         self.sql_generator = GeminiSQLGenerator(api_key)
         self.query_verifier = QueryVerifier(api_key)
         
-    def run(self, query: str, table_structure: dict, dialect: str = "generic SQL", **kwargs):
+    def run(self, query: str, table_structure: dict, dialect: str = "generic SQL", model: Optional[str] = None, **kwargs):
         """
         Generate and verify SQL queries from natural language.
         
@@ -174,6 +181,7 @@ class AgenticSQLGenerator(BaseComponent):
             query: Natural language query
             table_structure: Database schema as dictionary
             dialect: SQL dialect to use
+            model: Optional model name to use, defaults to config value
             
         Returns:
             Dictionary with valid SQL query or error message
@@ -183,7 +191,7 @@ class AgenticSQLGenerator(BaseComponent):
         valid_sql = None
         
         while attempt < max_attempts:
-            result, _ = self.sql_generator.run(query, table_structure, dialect=dialect, **kwargs)
+            result, _ = self.sql_generator.run(query, table_structure, dialect=dialect, model=model, **kwargs)
             generated_sql = result["sql_query"]
             
             verifier_result, _ = self.query_verifier.run(
@@ -191,6 +199,7 @@ class AgenticSQLGenerator(BaseComponent):
                 user_query=query,
                 table_structure=table_structure,
                 dialect=dialect,
+                model=model,
                 **kwargs
             )
             

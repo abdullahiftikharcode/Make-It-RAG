@@ -1,6 +1,7 @@
 import os
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import JSONResponse
+from typing import Optional
 
 from python_server.api.models import QueryRequest, QueryResponse, ErrorResponse
 from python_server.services.sql_service import SQLService
@@ -61,12 +62,17 @@ async def generate_sql(
         raise HTTPException(status_code=400, detail="Please provide a database connection string.")
         
     try:
+        # Get the model from settings if provided
+        model: Optional[str] = None
+        if req.settings and "model" in req.settings:
+            model = req.settings.get("model")
+        
         table_structure = sql_service.get_database_schema(req.db_url)
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Error retrieving schema: {str(e)}")
     
     # Validate the query against the schema
-    is_valid = sql_service.validate_query(req.query, table_structure)
+    is_valid = sql_service.validate_query(req.query, table_structure, model=model)
     if not is_valid:
         raise HTTPException(
             status_code=400, 
@@ -77,7 +83,8 @@ async def generate_sql(
     result = sql_service.generate_sql(
         query=req.query,
         table_structure=table_structure,
-        dialect=req.dialect
+        dialect=req.dialect,
+        model=model
     )
     
     if result["sql_query"] is None:
@@ -95,7 +102,8 @@ async def generate_sql(
     explanation = nlp_service.generate_natural_language_response(
         req.query, 
         columns, 
-        data
+        data,
+        model=model
     )
     
     return {

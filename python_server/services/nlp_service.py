@@ -1,6 +1,7 @@
 import google.generativeai as genai
 from python_server.config.config import GEMINI_MODEL
 from python_server.utils.text_utils import safe_decode
+from typing import Optional, List, Any
 
 class NLPService:
     """Service for natural language processing with LLMs."""
@@ -14,7 +15,7 @@ class NLPService:
         """
         genai.configure(api_key=api_key)
         
-    def generate_natural_language_response(self, user_query: str, columns, data):
+    def generate_natural_language_response(self, user_query: str, columns: List[str], data: List[Any], model: Optional[str] = None):
         """
         Generate a natural language response from SQL query results.
         
@@ -22,6 +23,7 @@ class NLPService:
             user_query: Original natural language query
             columns: Column names from the query results
             data: Data from the query results
+            model: Optional model name to use, defaults to config value
             
         Returns:
             Natural language explanation of the results
@@ -35,8 +37,9 @@ class NLPService:
             "Provide your summary in a bullet point list format:"
         )
         
-        model = genai.GenerativeModel(GEMINI_MODEL)
-        response = model.generate_content(prompt)
+        model_name = model if model else GEMINI_MODEL
+        model_instance = genai.GenerativeModel(model_name)
+        response = model_instance.generate_content(prompt)
         response_text = safe_decode(response.text).strip()
         
         return response_text 

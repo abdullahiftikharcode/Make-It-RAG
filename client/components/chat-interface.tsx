@@ -86,6 +86,7 @@ interface UserSettings {
   theme: 'light' | 'dark' | 'system'
   query_timeout: number
   show_sql_queries: boolean
+  model: string
 }
 
 interface ChatInterfaceProps {
@@ -101,6 +102,7 @@ export function ChatInterface({ connectionId, sessionId }: ChatInterfaceProps) {
   const [isSchemaLoading, setIsSchemaLoading] = useState(false)
   const [chatSessions, setChatSessions] = useState<ChatSession[]>([])
   const [settings, setSettings] = useState<UserSettings | null>(null)
+  const [selectedModel, setSelectedModel] = useState<string>("gemini-2.0-flash-lite-001")
   const { toast } = useToast()
   const chatContainerRef = useRef<HTMLDivElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -442,13 +444,18 @@ export function ChatInterface({ connectionId, sessionId }: ChatInterfaceProps) {
         connectionId: string,
         query: string,
         sessionId?: string,
-        settings: { query_timeout: number, show_sql_queries: boolean }
+        settings: { 
+          query_timeout: number, 
+          show_sql_queries: boolean,
+          model: string
+        }
       } = {
         connectionId: localConnectionId,
         query: input,
         settings: {
           query_timeout: settings?.query_timeout || 30,
           show_sql_queries: settings?.show_sql_queries ?? true,
+          model: selectedModel
         },
       }
       if (currentSessionId) {
@@ -856,7 +863,9 @@ export function ChatInterface({ connectionId, sessionId }: ChatInterfaceProps) {
                       <p className="text-sm sm:text-base">{message.content}</p>
                       ) : (
                         <ReactMarkdown 
-                          className="text-sm sm:text-base markdown-content" 
+                          components={{
+                            p: ({node, ...props}) => <p className="text-sm sm:text-base markdown-content" {...props} />
+                          }}
                           remarkPlugins={[remarkGfm]}
                         >
                           {message.content}
@@ -899,6 +908,15 @@ export function ChatInterface({ connectionId, sessionId }: ChatInterfaceProps) {
             </CardContent>
             <CardFooter className="p-3 sm:p-4 border-t flex-none">
               <div className="flex w-full items-center space-x-2">
+                <select 
+                  className="mr-4 p-2 border rounded bg-background text-foreground"
+                  value={selectedModel}
+                  onChange={(e) => setSelectedModel(e.target.value)}
+                >
+                  <option value="gemini-2.0-flash-lite-001">gemini-2.0-flash-lite-001</option>
+                  <option value="gemini-1.5-flash">gemini-1.5-flash</option>
+                  <option value="gemini-2.5-flash-preview-04-17">gemini-2.5-flash-preview-04-17</option>
+                </select>
                 <Input
                   placeholder="Ask a question about your database..."
                   className="text-sm sm:text-base"

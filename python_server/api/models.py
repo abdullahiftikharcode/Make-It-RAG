@@ -1,10 +1,12 @@
 from pydantic import BaseModel
+from typing import Dict, Any, Optional
 
 class QueryRequest(BaseModel):
     """Pydantic model for query request."""
     query: str
     db_url: str
     dialect: str = "generic SQL"
+    settings: Dict[str, Any] = {}
     
 class QueryResponse(BaseModel):
     """Pydantic model for query response."""
