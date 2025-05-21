@@ -7,6 +7,7 @@ CREATE TABLE users (
     last_login TIMESTAMP NULL,
     is_active BOOLEAN DEFAULT TRUE,
     role ENUM('user', 'admin') DEFAULT 'user',
+    subscription_tier ENUM('personal', 'corporate') DEFAULT 'personal',
     INDEX idx_email (email)
 );
 CREATE TABLE database_connections (

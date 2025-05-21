@@ -3,14 +3,39 @@ from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import JSONResponse
 from typing import Optional
 
-from python_server.api.models import QueryRequest, QueryResponse, ErrorResponse
+from python_server.api.models import (
+    QueryRequest, 
+    QueryResponse, 
+    ErrorResponse, 
+    ModelSelectionRequest,
+    ModelSelectionResponse,
+    ModelsListResponse
+)
 from python_server.services.sql_service import SQLService
 from python_server.services.nlp_service import NLPService
+from python_server.components.model_context import ModelContext
 from python_server.config.config import GEMINI_API_KEY
 
 router = APIRouter()
 
-def get_sql_service():
+# Create a global model context for the application
+# This allows model switching without restarting
+model_context = None
+
+def get_model_context():
+    """Dependency to get ModelContext instance."""
+    global model_context
+    if model_context is None:
+        api_key = os.getenv("GEMINI_API_KEY", GEMINI_API_KEY)
+        if not api_key:
+            raise HTTPException(
+                status_code=500, 
+                detail="API key not configured. Please set GEMINI_API_KEY environment variable."
+            )
+        model_context = ModelContext(api_key)
+    return model_context
+
+def get_sql_service(subscription_tier: str = "personal"):
     """Dependency to get SQLService instance."""
     api_key = os.getenv("GEMINI_API_KEY", GEMINI_API_KEY)
     if not api_key:
@@ -18,9 +43,9 @@ def get_sql_service():
             status_code=500, 
             detail="API key not configured. Please set GEMINI_API_KEY environment variable."
         )
-    return SQLService(api_key=api_key)
+    return SQLService(api_key=api_key, subscription_tier=subscription_tier, model_context=get_model_context())
     
-def get_nlp_service():
+def get_nlp_service(subscription_tier: str = "personal"):
     """Dependency to get NLPService instance."""
     api_key = os.getenv("GEMINI_API_KEY", GEMINI_API_KEY)
     if not api_key:
@@ -28,7 +53,11 @@ def get_nlp_service():
             status_code=500, 
             detail="API key not configured. Please set GEMINI_API_KEY environment variable."
         )
-    return NLPService(api_key=api_key)
+    return NLPService(api_key=api_key, subscription_tier=subscription_tier, model_context=get_model_context())
+
+def get_subscription_tier(req: QueryRequest) -> str:
+    """Dependency to get subscription tier from request."""
+    return req.subscription_tier
 
 @router.get("/health")
 async def health_check():
@@ -40,11 +69,58 @@ async def health_check():
     """
     return {"status": "healthy", "service": "text-to-sql"}
 
+@router.get("/models", response_model=ModelsListResponse)
+async def list_models(
+    model_ctx: ModelContext = Depends(get_model_context)
+):
+    """
+    List available models and the currently selected model
+    
+    Returns:
+        List of available models and the current model
+    """
+    current_model = model_ctx.get_current_model_info()
+    return {
+        "models": model_ctx.get_available_models(),
+        "current_model": current_model
+    }
+
+@router.post("/models/select", response_model=ModelSelectionResponse)
+async def select_model(
+    request: ModelSelectionRequest,
+    model_ctx: ModelContext = Depends(get_model_context)
+):
+    """
+    Select a model by ID
+    
+    Args:
+        request: Request containing the model ID to select
+        
+    Returns:
+        Response with success status and selected model info
+    """
+    success = model_ctx.select_model(request.model_id)
+    if success:
+        selected_model = model_ctx.get_current_model_info()
+        return {
+            "success": True,
+            "selected_model": selected_model,
+            "message": f"Successfully switched to model: {selected_model['name']}"
+        }
+    else:
+        return {
+            "success": False,
+            "selected_model": None,
+            "message": f"Model with ID '{request.model_id}' not found"
+        }
+
 @router.post("/generate", response_model=QueryResponse, responses={400: {"model": ErrorResponse}})
 async def generate_sql(
-    req: QueryRequest, 
+    req: QueryRequest,
+    subscription_tier: str = Depends(get_subscription_tier),
     sql_service: SQLService = Depends(get_sql_service),
-    nlp_service: NLPService = Depends(get_nlp_service)
+    nlp_service: NLPService = Depends(get_nlp_service),
+    model_ctx: ModelContext = Depends(get_model_context)
 ):
     """
     Generate SQL query from natural language and execute it.
@@ -55,6 +131,14 @@ async def generate_sql(
     Returns:
         Generated SQL query, results, and natural language explanation
     """
+    # If a model was selected in the request, switch to it
+    if req.selected_model_id:
+        model_ctx.select_model(req.selected_model_id)
+    
+    # Get the current model name for response
+    current_model_info = model_ctx.get_current_model_info()
+    model_name = current_model_info["name"]
+    
     if not req.query:
         raise HTTPException(status_code=400, detail="Please enter a natural language query.")
         
@@ -110,7 +194,8 @@ async def generate_sql(
         "sql_query": sql_query,
         "columns": columns,
         "data": data,
-        "explanation": explanation
+        "explanation": explanation,
+        "model_used": model_name
     }
 
 @router.get("/schema")

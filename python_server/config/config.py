@@ -8,7 +8,24 @@ load_dotenv()
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '')
 
 # Model configurations
-GEMINI_MODEL = os.getenv('GEMINI_MODEL', 'gemini-2.0-flash-lite-001')
+GEMINI_MODEL = os.getenv('GEMINI_MODEL', 'gemini-1.0-pro')  # Default model
+
+# Subscription tier models
+CORPORATE_MODEL = os.getenv('CORPORATE_MODEL', 'gemini-1.5-pro')
+PERSONAL_MODEL = os.getenv('PERSONAL_MODEL', 'gemini-1.0-pro')
+
+# Model parameters
+CORPORATE_MODEL_PARAMS = {
+    "temperature": 0.2,
+    "top_p": 0.9,
+    "top_k": 40
+}
+
+PERSONAL_MODEL_PARAMS = {
+    "temperature": 0.7,
+    "top_p": 0.95,
+    "top_k": 30
+}
 
 # Service settings
 MAX_SQL_GENERATION_ATTEMPTS = int(os.getenv('MAX_SQL_GENERATION_ATTEMPTS', '5'))

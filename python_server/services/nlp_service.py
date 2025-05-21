@@ -1,19 +1,24 @@
 import google.generativeai as genai
 from python_server.config.config import GEMINI_MODEL
 from python_server.utils.text_utils import safe_decode
+from python_server.components.model_factory import ModelFactory
 from typing import Optional, List, Any
 
 class NLPService:
     """Service for natural language processing with LLMs."""
     
-    def __init__(self, api_key: str):
+    def __init__(self, api_key: str, subscription_tier: str = "personal", model_context=None):
         """
         Initialize the NLP service.
         
         Args:
             api_key: Gemini API key
+            subscription_tier: User's subscription tier
+            model_context: Optional model context for model selection
         """
-        genai.configure(api_key=api_key)
+        self.api_key = api_key
+        self.subscription_tier = subscription_tier
+        self.model_context = model_context
         
     def generate_natural_language_response(self, user_query: str, columns: List[str], data: List[Any], model: Optional[str] = None):
         """
@@ -37,9 +42,19 @@ class NLPService:
             "Provide your summary in a bullet point list format:"
         )
         
-        model_name = model if model else GEMINI_MODEL
-        model_instance = genai.GenerativeModel(model_name)
-        response = model_instance.generate_content(prompt)
-        response_text = safe_decode(response.text).strip()
+        # Use the model context if available, otherwise fallback to the model factory
+        if self.model_context:
+            response = self.model_context.generate_content(prompt)
+        else:
+            # Use the model factory to get the appropriate model based on subscription tier
+            ai_model = ModelFactory.create_model(self.subscription_tier, self.api_key)
+            response = ai_model.generate_content(prompt)
+        
+        # Extract text from the response
+        if hasattr(response, 'text'):
+            response_text = safe_decode(response.text).strip()
+        else:
+            # Handle different response format if needed
+            response_text = str(response)
         
         return response_text 
