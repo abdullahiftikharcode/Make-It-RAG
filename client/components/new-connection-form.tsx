@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { useToast } from "@/components/ui/use-toast"
+import { Database, Server, Table2 } from "lucide-react"
 import apiConfig from "@/config/api"
 
 export function NewConnectionForm() {
@@ -83,7 +84,7 @@ export function NewConnectionForm() {
         <CardContent className="space-y-4">
           <div className="grid gap-2">
             <Label htmlFor="name">Connection Name</Label>
-            <Input id="name" name="name" required />
+            <Input id="name" name="name" placeholder="My Database" required />
           </div>
           <div className="grid gap-2">
             <Label>Database Type</Label>
@@ -92,41 +93,49 @@ export function NewConnectionForm() {
                 <RadioGroupItem value="mysql" id="mysql" className="peer sr-only" />
                 <Label
                   htmlFor="mysql"
-                  className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-transparent p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary"
+                  className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer"
                 >
-                  MySQL
+                  <Database className="mb-3 h-6 w-6" />
+                  <span className="text-sm font-medium">MySQL</span>
                 </Label>
               </div>
               <div>
                 <RadioGroupItem value="postgresql" id="postgresql" className="peer sr-only" />
                 <Label
                   htmlFor="postgresql"
-                  className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-transparent p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary"
+                  className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer"
                 >
-                  PostgreSQL
+                  <Table2 className="mb-3 h-6 w-6" />
+                  <span className="text-sm font-medium">PostgreSQL</span>
                 </Label>
               </div>
               <div>
                 <RadioGroupItem value="mssql" id="mssql" className="peer sr-only" />
                 <Label
                   htmlFor="mssql"
-                  className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-transparent p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary"
+                  className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer"
                 >
-                  SQL Server
+                  <Server className="mb-3 h-6 w-6" />
+                  <span className="text-sm font-medium">SQL Server</span>
                 </Label>
               </div>
             </RadioGroup>
           </div>
           <div className="grid gap-2">
             <Label htmlFor="connection-string">Connection String</Label>
-            <Input id="connection-string" name="connection-string" required />
+            <Input 
+              id="connection-string" 
+              name="connection-string" 
+              placeholder="mysql://user:password@localhost:3306/database"
+              required 
+            />
             <p className="text-sm text-muted-foreground">
-              Example: mysql://user:password@localhost:3306/database
+              Format: protocol://user:password@host:port/database
             </p>
           </div>
         </CardContent>
         <CardFooter>
-          <Button type="submit" disabled={isLoading}>
+          <Button type="submit" disabled={isLoading} className="w-full">
             {isLoading ? "Creating..." : "Create Connection"}
           </Button>
         </CardFooter>
