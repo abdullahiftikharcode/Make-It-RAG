@@ -1,28 +1,32 @@
 "use client"
 
 import { useEffect, useRef } from "react"
-import lottie from "lottie-web"
 import { Button } from "@/components/ui/button"
 import { Plus } from "lucide-react"
 import Link from "next/link"
 
 export function EmptyConnections() {
   const container = useRef<HTMLDivElement>(null)
+  const anim = useRef<any>(null)
 
   useEffect(() => {
-    if (container.current) {
-      lottie.loadAnimation({
-        container: container.current,
-        renderer: "svg",
-        loop: true,
-        autoplay: true,
-        // This is a nice database/connection animation
-        path: "https://lottie.host/2f1445d4-4b3e-4fbe-96d2-ee5d83dfa1ec/YmBvSTbO0l.json",
-      })
-    }
+    import('lottie-web').then((Lottie) => {
+      if (container.current) {
+        anim.current = Lottie.default.loadAnimation({
+          container: container.current,
+          renderer: "svg",
+          loop: true,
+          autoplay: true,
+          // This is a nice database/connection animation
+          path: "https://lottie.host/2f1445d4-4b3e-4fbe-96d2-ee5d83dfa1ec/YmBvSTbO0l.json",
+        })
+      }
+    })
 
     return () => {
-      lottie.destroy()
+      if (anim.current) {
+        anim.current.destroy()
+      }
     }
   }, [])
 
