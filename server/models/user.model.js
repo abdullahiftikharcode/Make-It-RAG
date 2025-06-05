@@ -11,7 +11,10 @@ class UserModel {
     static async findById(userId) {
     try {
       const [rows] = await promisePool.query(
-        `SELECT id, name, email, bio, company, role, is_active, subscription_tier,
+        `SELECT id, name, email, 
+         COALESCE(bio, '') as bio,
+         COALESCE(company, '') as company,
+         role, is_active, subscription_tier,
          IF(image IS NOT NULL, CONCAT('data:image/jpeg;base64,', TO_BASE64(image)), null) as image
          FROM users WHERE id = ?`,
         [userId]

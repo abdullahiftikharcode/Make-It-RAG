@@ -1,8 +1,15 @@
+Create DATABASE  make_it_rag;
+use make_it_rag;
+
+
 CREATE TABLE users (
     id VARCHAR(36) PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     email VARCHAR(255) NOT NULL UNIQUE,
     password_hash VARCHAR(255) NOT NULL,
+    bio TEXT NULL,
+    company VARCHAR(255) NULL,
+    image MEDIUMBLOB NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     last_login TIMESTAMP NULL,
     is_active BOOLEAN DEFAULT TRUE,
@@ -150,6 +157,7 @@ CREATE TABLE invoices (
     INDEX idx_user_id (user_id),
     INDEX idx_subscription_id (subscription_id)
 );
+
 -- Insert default subscription plans
 INSERT INTO subscription_plans (id, name, price, billing_interval, features) VALUES
 (UUID(), 'Free', 0.00, 'monthly', '{"queries_per_month": 100, "db_connections": 1, "chat_history_days": 7, "support_level": "community"}'),
