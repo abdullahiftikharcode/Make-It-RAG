@@ -324,7 +324,7 @@ export function UserBillingForm() {
                     </div>
                     <div className="rounded-full bg-primary/20 px-2 py-1 text-xs font-medium text-primary">
                       {subscription.status === 'trial' ? 'Trial' : 'Current'}
-                    </div>
+                  </div>
                 </div>
                 <Separator className="my-4" />
                   
