@@ -10,6 +10,11 @@ const protectedRoutes = [
   '/settings'
 ]
 
+// Get backend URL from environment variable
+const getBackendUrl = () => {
+  return process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001'
+}
+
 export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname
 
@@ -32,7 +37,7 @@ export async function middleware(request: NextRequest) {
       const timeoutId = setTimeout(() => controller.abort(), 5000) // 5-second timeout
       
       // Validate token with server
-      const response = await fetch('http://localhost:3001/validate-token', {
+      const response = await fetch(`${getBackendUrl()}/validate-token`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',

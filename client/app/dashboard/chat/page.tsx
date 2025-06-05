@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Database, MessageSquare, Plus } from "lucide-react"
 import Link from "next/link"
 import { useToast } from "@/components/ui/use-toast"
+import apiConfig from "@/config/api"
 
 interface ChatSession {
   id: string
@@ -37,7 +38,7 @@ export default function ChatPage() {
           return
         }
 
-        const response = await fetch("http://localhost:3001/api/chat-sessions", {
+        const response = await fetch(apiConfig.getApiUrl("/api/chat-sessions"), {
           headers: {
             Authorization: `Bearer ${token}`,
           },

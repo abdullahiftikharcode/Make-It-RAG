@@ -10,6 +10,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Separator } from "@/components/ui/separator"
 import { Sun, Moon, Monitor } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
+import apiConfig from "@/config/api"
 
 interface UserSettings {
   theme: 'light' | 'dark' | 'system'
@@ -55,7 +56,7 @@ export default function AppearanceSettingsPage() {
         return
       }
 
-      const response = await fetch('http://localhost:3001/api/settings', {
+      const response = await fetch(apiConfig.getApiUrl('/api/settings'), {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -97,7 +98,7 @@ export default function AppearanceSettingsPage() {
         return
       }
 
-      const response = await fetch('http://localhost:3001/api/settings', {
+      const response = await fetch(apiConfig.getApiUrl('/api/settings'), {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

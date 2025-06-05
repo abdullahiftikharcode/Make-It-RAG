@@ -16,6 +16,7 @@ import { Separator } from "@/components/ui/separator"
 import { Textarea } from "@/components/ui/textarea"
 import { useBubble } from "@/hooks/use-bubble"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import apiConfig from "@/config/api"
 
 // Debounce function to prevent excessive state updates
 function useDebounce(value: any, delay: number) {
@@ -76,7 +77,7 @@ export function UserProfileForm() {
         return
       }
       try {
-        const response = await fetch('http://localhost:3001/api/profile', {
+        const response = await fetch(apiConfig.getApiUrl('/api/profile'), {
           method: 'GET',
           headers: {
              Authorization: `Bearer ${token}`,
@@ -172,7 +173,7 @@ export function UserProfileForm() {
         })
         return
       }
-      const response = await fetch('http://localhost:3001/api/profile', {
+      const response = await fetch(apiConfig.getApiUrl('/api/profile'), {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

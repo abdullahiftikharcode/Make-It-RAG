@@ -14,6 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useToast } from "@/components/ui/use-toast"
 import { toast } from "sonner"
 import { Sun, Moon, Monitor } from "lucide-react"
+import apiConfig from "@/config/api"
 
 interface UserSettings {
   theme: 'light' | 'dark' | 'system'
@@ -59,7 +60,7 @@ export default function SettingsPage() {
         return
       }
 
-      const response = await fetch('http://localhost:3001/api/settings', {
+      const response = await fetch(apiConfig.getApiUrl('/api/settings'), {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -101,7 +102,7 @@ export default function SettingsPage() {
         return
       }
 
-      const response = await fetch('http://localhost:3001/api/settings', {
+      const response = await fetch(apiConfig.getApiUrl('/api/settings'), {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -370,7 +371,7 @@ function ApiKeyManager() {
         return;
       }
 
-      const response = await fetch('http://localhost:3001/api/api-keys', {
+      const response = await fetch(apiConfig.getApiUrl('/api/api-keys'), {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -409,7 +410,7 @@ function ApiKeyManager() {
         return;
       }
 
-      const response = await fetch('http://localhost:3001/api/api-keys', {
+      const response = await fetch(apiConfig.getApiUrl('/api/api-keys'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -463,7 +464,7 @@ function ApiKeyManager() {
         return;
       }
 
-      const response = await fetch(`http://localhost:3001/api/api-keys/${keyId}`, {
+      const response = await fetch(apiConfig.getApiUrl(`/api/api-keys/${keyId}`), {
         method: 'DELETE',
         headers: {
           Authorization: `Bearer ${token}`,

@@ -10,6 +10,7 @@ import { useBubble } from "@/hooks/use-bubble"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import apiConfig from "@/config/api"
 
 interface Plan {
   id: string
@@ -91,14 +92,14 @@ export function UserBillingForm() {
       }
 
       // Load subscription plans
-      const plansResponse = await fetch('http://localhost:3001/api/billing/plans', {
+      const plansResponse = await fetch(apiConfig.getApiUrl('/api/billing/plans'), {
         headers: { Authorization: `Bearer ${token}` },
       })
       const plansData = await plansResponse.json()
       setPlans(plansData)
 
       // Load current subscription
-      const subscriptionResponse = await fetch('http://localhost:3001/api/billing/subscription', {
+      const subscriptionResponse = await fetch(apiConfig.getApiUrl('/api/billing/subscription'), {
         headers: { Authorization: `Bearer ${token}` },
       })
       const subscriptionData = await subscriptionResponse.json()
@@ -106,14 +107,14 @@ export function UserBillingForm() {
       setSelectedPlan(subscriptionData.plan_name.toLowerCase())
 
       // Load payment methods
-      const paymentMethodsResponse = await fetch('http://localhost:3001/api/billing/payment-methods', {
+      const paymentMethodsResponse = await fetch(apiConfig.getApiUrl('/api/billing/payment-methods'), {
         headers: { Authorization: `Bearer ${token}` },
       })
       const paymentMethodsData = await paymentMethodsResponse.json()
       setPaymentMethods(paymentMethodsData)
 
       // Load billing history
-      const historyResponse = await fetch('http://localhost:3001/api/billing/history', {
+      const historyResponse = await fetch(apiConfig.getApiUrl('/api/billing/history'), {
         headers: { Authorization: `Bearer ${token}` },
       })
       const historyData = await historyResponse.json()
@@ -145,7 +146,7 @@ export function UserBillingForm() {
         return
       }
 
-      const response = await fetch('http://localhost:3001/api/billing/payment-methods', {
+      const response = await fetch(apiConfig.getApiUrl('/api/billing/payment-methods'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -208,7 +209,7 @@ export function UserBillingForm() {
       }
 
       // Create new subscription
-      const response = await fetch('http://localhost:3001/api/billing/subscription', {
+      const response = await fetch(apiConfig.getApiUrl('/api/billing/subscription'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -269,7 +270,7 @@ export function UserBillingForm() {
         return
       }
 
-      const response = await fetch(`http://localhost:3001/api/billing/subscription/${subscription.id}`, {
+      const response = await fetch(apiConfig.getApiUrl(`/api/billing/subscription/${subscription.id}`), {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       })

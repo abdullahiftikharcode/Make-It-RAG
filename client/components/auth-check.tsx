@@ -2,6 +2,7 @@
 
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
+import apiConfig from "@/config/api"
 
 export function AuthCheck() {
   const router = useRouter()
@@ -13,7 +14,7 @@ export function AuthCheck() {
 
       try {
         // Validate token with server
-        const response = await fetch("http://localhost:3001/validate-token", {
+        const response = await fetch(apiConfig.getApiUrl("/validate-token"), {
           method: "GET",
           headers: {
             "Authorization": `Bearer ${token}`,

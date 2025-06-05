@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input"
 import { MessageSquare, Search, Trash2 } from "lucide-react"
 import Link from "next/link"
 import { useToast } from "@/components/ui/use-toast"
+import apiConfig from "@/config/api"
 
 export default function HistoryPage() {
   const [sessions, setSessions] = useState<any[]>([])
@@ -29,7 +30,7 @@ export default function HistoryPage() {
           })
           return
         }
-        const response = await fetch("http://localhost:3001/api/chats", {
+        const response = await fetch(apiConfig.getApiUrl("/api/chats"), {
           method: "GET",
           headers: {
             Authorization: `Bearer ${token}`,
@@ -54,114 +55,113 @@ export default function HistoryPage() {
     fetchSessions()
   }, [toast])
 
-  // Filter sessions based on the search term
-  const filteredSessions = sessions.filter((session) => {
-    const lowerSearch = search.toLowerCase();
-    const connectionName = session.connectionName || "";
-    const firstQuery = session.firstQuery || "";
-    return (
-      connectionName.toLowerCase().includes(lowerSearch) ||
-      firstQuery.toLowerCase().includes(lowerSearch)
-    );
-  });
-
-  // Delete a chat session using its sessionId
-  const handleDelete = async (sessionId: string) => {
-    try {
-      const token = localStorage.getItem("auth_token")
-      if (!token) {
-        toast({
-          title: "Error",
-          description: "Please log in to continue.",
-          variant: "destructive",
-        })
-        return
-      }
-      const response = await fetch(`http://localhost:3001/api/chats/${sessionId}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
-      const data = await response.json()
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to delete chat session")
-      }
-      // Remove the deleted session from state
-      setSessions(prev => prev.filter(session => session.sessionId !== sessionId))
-      toast({
-        title: "Deleted",
-        description: "Chat session deleted successfully.",
-      })
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      })
-    }
-  }
+  // Filter sessions based on search input
+  const filteredSessions = sessions.filter((session) =>
+    session.title.toLowerCase().includes(search.toLowerCase())
+  )
 
   return (
     <DashboardShell>
       <DashboardHeader
         heading="Chat History"
-        text="View and manage your previous database conversations."
+        text="View and manage your past chat sessions."
       />
-      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 mb-4">
-        <div className="relative flex-1 w-full">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+      <div className="space-y-4">
+        <div className="flex items-center space-x-2">
+          <Search className="h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search chat history..."
-            className="pl-8 w-full"
+            placeholder="Search chat sessions..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
+            className="max-w-sm"
           />
         </div>
-        <Button variant="outline" className="w-full sm:w-auto" onClick={() => setSearch("")}>
-          Clear Filters
-        </Button>
-      </div>
-      <div className="grid gap-4">
-        {isLoading && <p>Loading...</p>}
-        {!isLoading && filteredSessions.length === 0 && (
-          <p className="text-center text-muted-foreground">No chat sessions found.</p>
-        )}
-        {!isLoading &&
-          filteredSessions.map((session, index) => (
-            <Card key={session.sessionId || `session-${index}`}>
-              <CardHeader className="p-3 sm:p-4 flex flex-col sm:flex-row sm:items-start justify-between space-y-2 sm:space-y-0">
-                <div>
-                  {/* Display the database connection name instead of the session title */}
-                  <CardTitle className="text-base">{session.connectionName}</CardTitle>
-                  <CardDescription>
-                    {new Date(session.created_at).toLocaleDateString()} · {session.messageCount} messages
-                  </CardDescription>
-                </div>
-                <div className="flex space-x-2">
-                  <Link href={`/dashboard/chat/sess-${session.sessionId}`}>
-                    <Button variant="outline" size="sm">
-                      <MessageSquare className="h-4 w-4 mr-2" />
-                      Continue
-                    </Button>
-                  </Link>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="text-destructive"
-                    onClick={() => handleDelete(session.sessionId)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent className="p-4 pt-0">
-                <div className="text-sm text-muted-foreground line-clamp-2">
-                  {session.firstQuery}
+        <div className="grid gap-4">
+          {isLoading ? (
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex justify-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                 </div>
               </CardContent>
             </Card>
-          ))}
+          ) : filteredSessions.length === 0 ? (
+            <Card>
+              <CardContent className="p-6">
+                <div className="text-center text-muted-foreground">
+                  {search ? "No matching chat sessions found." : "No chat sessions yet."}
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            filteredSessions.map((session) => (
+              <Card key={session.id}>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0">
+                  <div>
+                    <CardTitle>{session.title || "Untitled Chat"}</CardTitle>
+                    <CardDescription>
+                      {new Date(session.created_at).toLocaleDateString()} •{" "}
+                      {session.message_count} messages
+                    </CardDescription>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Link href={`/dashboard/chat/${session.id}`}>
+                      <Button variant="secondary" size="sm">
+                        <MessageSquare className="mr-2 h-4 w-4" />
+                        View Chat
+                      </Button>
+                    </Link>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={async () => {
+                        try {
+                          const token = localStorage.getItem("auth_token")
+                          if (!token) {
+                            toast({
+                              title: "Error",
+                              description: "Please log in to continue.",
+                              variant: "destructive",
+                            })
+                            return
+                          }
+                          const response = await fetch(
+                            apiConfig.getApiUrl(`/api/chats/${session.id}`),
+                            {
+                              method: "DELETE",
+                              headers: {
+                                Authorization: `Bearer ${token}`,
+                              },
+                            }
+                          )
+                          if (!response.ok) {
+                            throw new Error("Failed to delete chat session")
+                          }
+                          setSessions((prev) =>
+                            prev.filter((s) => s.id !== session.id)
+                          )
+                          toast({
+                            title: "Success",
+                            description: "Chat session deleted successfully.",
+                          })
+                        } catch (error: any) {
+                          toast({
+                            title: "Error",
+                            description:
+                              error.message || "Failed to delete chat session",
+                            variant: "destructive",
+                          })
+                        }
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </CardHeader>
+              </Card>
+            ))
+          )}
+        </div>
       </div>
     </DashboardShell>
   )

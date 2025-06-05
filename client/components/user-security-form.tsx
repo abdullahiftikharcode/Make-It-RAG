@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { useBubble } from "@/hooks/use-bubble"
+import apiConfig from "@/config/api"
 
 export function UserSecurityForm() {
   const [isLoading, setIsLoading] = useState(false)
@@ -23,45 +24,58 @@ export function UserSecurityForm() {
     const newPassword = formData.get("new-password") as string
     const confirmPassword = formData.get("confirm-password") as string
 
+    // Validate passwords match
+    if (newPassword !== confirmPassword) {
+      toast({
+        title: "Error",
+        description: "New passwords do not match.",
+        variant: "destructive",
+      })
+      setIsLoading(false)
+      return
+    }
+
     try {
       const token = localStorage.getItem("auth_token")
       if (!token) {
         toast({
-          title: "Authentication Error",
+          title: "Error",
           description: "Please log in to continue.",
           variant: "destructive",
-          duration: 5000
         })
         return
       }
 
-      // Call the change password API
-      const response = await fetch("http://localhost:3001/api/change-password", {
-        method: "PUT",
+      const response = await fetch(apiConfig.getApiUrl("/api/change-password"), {
+        method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ currentPassword, newPassword, confirmNewPassword: confirmPassword }),
+        body: JSON.stringify({
+          currentPassword,
+          newPassword,
+        }),
       })
 
       const data = await response.json()
+
       if (!response.ok) {
-        throw new Error(data.error || "Failed to update password")
+        throw new Error(data.error || "Failed to change password")
       }
+
+      // Clear form
+      event.currentTarget.reset()
 
       toast({
         title: "Success",
-        description: data.message || "Your password has been updated successfully.",
-        variant: "success",
-        duration: 3000
+        description: "Your password has been updated.",
       })
-    } catch (error: any) {
+    } catch (error) {
       toast({
-        title: "Error Updating Password",
-        description: error.message || "Failed to update password",
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to change password",
         variant: "destructive",
-        duration: 5000
       })
     } finally {
       setIsLoading(false)

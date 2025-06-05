@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Database, Plus } from "lucide-react"
 import Link from "next/link"
+import apiConfig from "@/config/api"
 
 export default function DashboardPage() {
   const [stats, setStats] = useState({
@@ -32,7 +33,7 @@ export default function DashboardPage() {
         if (!token) {
           return
         }
-        const response = await fetch("http://localhost:3001/api/dashboard/stats", {
+        const response = await fetch(apiConfig.getApiUrl("/api/dashboard/stats"), {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
@@ -61,7 +62,7 @@ export default function DashboardPage() {
       try {
         const token = localStorage.getItem("auth_token")
         if (!token) return
-        const response = await fetch("http://localhost:3001/api/dashboard/recent-connections", {
+        const response = await fetch(apiConfig.getApiUrl("/api/dashboard/recent-connections"), {
           headers: { Authorization: `Bearer ${token}` },
         })
         const contentType = response.headers.get("Content-Type")
@@ -93,7 +94,7 @@ export default function DashboardPage() {
       try {
         const token = localStorage.getItem("auth_token")
         if (!token) return
-        const response = await fetch("http://localhost:3001/api/dashboard/recent-chats", {
+        const response = await fetch(apiConfig.getApiUrl("/api/dashboard/recent-chats"), {
           headers: { Authorization: `Bearer ${token}` },
         })
         const contentType = response.headers.get("Content-Type")
@@ -119,7 +120,10 @@ export default function DashboardPage() {
 
   return (
     <DashboardShell>
-      <DashboardHeader heading="Dashboard" text="Manage your database connections and chat history.">
+      <DashboardHeader
+        heading="Dashboard"
+        text="View your database connections and recent activity."
+      >
         <Link href="/dashboard/connections/new">
           <Button>
             <Plus className="mr-2 h-4 w-4" />
@@ -127,26 +131,17 @@ export default function DashboardPage() {
           </Button>
         </Link>
       </DashboardHeader>
-      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Queries</CardTitle>
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              className="h-4 w-4 text-muted-foreground"
-            >
-              <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
-            </svg>
+            <Database className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.totalQueries}</div>
-            <p className="text-xs text-muted-foreground">This week: +{stats.queriesThisWeek} queries</p>
+            <p className="text-xs text-muted-foreground">
+              +{stats.queriesThisWeek} this week
+            </p>
           </CardContent>
         </Card>
         <Card>
@@ -156,60 +151,48 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.activeConnections}</div>
-            <p className="text-xs text-muted-foreground">This week: +{stats.activeConnectionsThisWeek} active</p>
+            <p className="text-xs text-muted-foreground">
+              +{stats.activeConnectionsThisWeek} this week
+            </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Saved Chats</CardTitle>
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              className="h-4 w-4 text-muted-foreground"
-            >
-              <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
-            </svg>
+            <Database className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.savedChats}</div>
-            <p className="text-xs text-muted-foreground">This week: +{stats.savedChatsThisWeek} saved</p>
+            <p className="text-xs text-muted-foreground">
+              +{stats.savedChatsThisWeek} this week
+            </p>
           </CardContent>
         </Card>
       </div>
-      <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-7">
-        {/* Recent Connections */}
-        <Card className="col-span-1 md:col-span-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+        <Card className="col-span-4">
           <CardHeader>
             <CardTitle>Recent Connections</CardTitle>
-            <CardDescription>Your recently used database connections.</CardDescription>
+            <CardDescription>Your recently added database connections.</CardDescription>
           </CardHeader>
           <CardContent>
             {isLoadingConns ? (
-              <p>Loading recent connections...</p>
+              <div className="flex justify-center p-4">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+              </div>
             ) : recentConnections.length === 0 ? (
-              <p className="text-muted-foreground">No recent connections found.</p>
+              <p className="text-sm text-muted-foreground">No recent connections found.</p>
             ) : (
               <div className="space-y-4">
-                {recentConnections.map((conn) => (
-                  <div key={conn.id} className="flex items-center justify-between border-b pb-4">
-                    <div className="flex items-center space-x-4">
-                      <div className="rounded-full bg-primary/10 p-2">
-                        <Database className="h-4 w-4 text-primary" />
-                      </div>
-                      <div>
-                        <p className="text-md font-medium">{conn.name}</p>
-                        {/* Display the type under the connection name */}
-                        <p className="text-sm text-muted-foreground">{conn.type}</p>
-                      </div>
+                {recentConnections.map((connection) => (
+                  <div key={connection.id} className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium">{connection.name}</p>
+                      <p className="text-sm text-muted-foreground">{connection.type}</p>
                     </div>
-                    <Link href={`/dashboard/chat/${conn.id}`}>
-                      <Button variant="outline" size="sm">
-                        Chat
+                    <Link href={`/dashboard/connections/${connection.id}`}>
+                      <Button variant="ghost" size="sm">
+                        View
                       </Button>
                     </Link>
                   </div>
@@ -218,36 +201,29 @@ export default function DashboardPage() {
             )}
           </CardContent>
         </Card>
-        {/* Recent Chats */}
-        <Card className="col-span-1 md:col-span-3">
+        <Card className="col-span-3">
           <CardHeader>
             <CardTitle>Recent Chats</CardTitle>
-            <CardDescription>Your recent database conversations.</CardDescription>
+            <CardDescription>Your recent chat sessions.</CardDescription>
           </CardHeader>
           <CardContent>
             {isLoadingChats ? (
-              <p>Loading recent chats...</p>
+              <div className="flex justify-center p-4">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+              </div>
             ) : recentChats.length === 0 ? (
-              <p className="text-muted-foreground">No recent chats found.</p>
+              <p className="text-sm text-muted-foreground">No recent chats found.</p>
             ) : (
               <div className="space-y-4">
-                {recentChats.map((session) => (
-                  <div key={session.id} className="flex items-center justify-between border-b pb-4">
+                {recentChats.map((chat) => (
+                  <div key={chat.id} className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm font-medium">{session.title}</p>
-                      <p className="text-xs text-muted-foreground">
-                      {session.updated_at 
-  ? new Date(session.updated_at.replace(" ", "T")).toLocaleString(undefined, {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    })
-  : "N/A"}
+                      <p className="font-medium">{chat.title || "Untitled Chat"}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {new Date(chat.created_at).toLocaleDateString()}
                       </p>
                     </div>
-                    <Link href={`/dashboard/chat/sess-${session.id}`}>
+                    <Link href={`/dashboard/chat/${chat.id}`}>
                       <Button variant="ghost" size="sm">
                         View
                       </Button>

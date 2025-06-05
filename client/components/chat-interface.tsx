@@ -9,6 +9,7 @@ import { Database, Save } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
+import apiConfig from "@/config/api"
 
 interface Message {
   id: string
@@ -153,7 +154,7 @@ export function ChatInterface({ connectionId, sessionId }: ChatInterfaceProps) {
         const token = localStorage.getItem("auth_token")
         if (!token) return
 
-        const response = await fetch('http://localhost:3001/api/profile', {
+        const response = await fetch(apiConfig.getApiUrl('/api/profile'), {
           headers: { Authorization: `Bearer ${token}` },
         })
         
@@ -201,7 +202,7 @@ export function ChatInterface({ connectionId, sessionId }: ChatInterfaceProps) {
       }
   
 
-      const response = await fetch(`http://localhost:3001/api/chat-sessions/${sessionId}`, {
+      const response = await fetch(apiConfig.getApiUrl(`/api/chat-sessions/${sessionId}`), {
         headers: { Authorization: `Bearer ${token}` },
       })
   
@@ -236,7 +237,7 @@ export function ChatInterface({ connectionId, sessionId }: ChatInterfaceProps) {
       if (!storedSchema) {
         setIsSchemaLoading(true)
         try {
-          const schemaResponse = await fetch(`http://localhost:3001/api/schema/${targetConnectionId}`, {
+          const schemaResponse = await fetch(apiConfig.getApiUrl(`/api/schema/${targetConnectionId}`), {
             headers: { Authorization: `Bearer ${token}` },
           })
   
@@ -294,7 +295,7 @@ export function ChatInterface({ connectionId, sessionId }: ChatInterfaceProps) {
         return
       }
 
-      const response = await fetch(`http://localhost:3001/api/chat-sessions/connection/${connectionId}`, {
+      const response = await fetch(apiConfig.getApiUrl(`/api/chat-sessions/connection/${connectionId}`), {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -399,7 +400,7 @@ export function ChatInterface({ connectionId, sessionId }: ChatInterfaceProps) {
         return
       }
 
-      const response = await fetch('http://localhost:3001/api/settings', {
+      const response = await fetch(apiConfig.getApiUrl('/api/settings'), {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -483,14 +484,14 @@ export function ChatInterface({ connectionId, sessionId }: ChatInterfaceProps) {
       let localConnectionId = connectionId
       if (currentSessionId) {
         try {
-          const fetchWithSessionId = fetch(`http://localhost:3001/api/chat-sessions/${currentSessionId}`, {
+          const fetchWithSessionId = fetch(apiConfig.getApiUrl(`/api/chat-sessions/${currentSessionId}`), {
             headers: { Authorization: `Bearer ${token}` },
           }).then(async (res) => {
             if (!res.ok) throw new Error("SessionId fetch failed")
             return res.json()
           })
   
-          const fetchWithConnectionId = fetch(`http://localhost:3001/api/chat-sessions/${connectionId}`, {
+          const fetchWithConnectionId = fetch(apiConfig.getApiUrl(`/api/chat-sessions/${connectionId}`), {
             headers: { Authorization: `Bearer ${token}` },
           }).then(async (res) => {
             if (!res.ok) throw new Error("ConnectionId fetch failed")
@@ -521,7 +522,7 @@ export function ChatInterface({ connectionId, sessionId }: ChatInterfaceProps) {
         payload.sessionId = currentSessionId
       }
   
-      const response = await fetch("http://localhost:3001/api/chat", {
+      const response = await fetch(apiConfig.getApiUrl("/api/chat"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -592,7 +593,7 @@ export function ChatInterface({ connectionId, sessionId }: ChatInterfaceProps) {
         if (currentSessionId.startsWith("sess-")) {
             cleanid = currentSessionId.replace("sess-", "");
         }
-        const sessionResponse = await fetch(`http://localhost:3001/api/chat-sessions/${cleanid}`, {
+        const sessionResponse = await fetch(apiConfig.getApiUrl(`/api/chat-sessions/${cleanid}`), {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -607,7 +608,7 @@ export function ChatInterface({ connectionId, sessionId }: ChatInterfaceProps) {
         const controller = new AbortController()
         const timeout = setTimeout(() => controller.abort(), 60000) // 60 second timeout
         try {
-          const schemaResponse = await fetch(`http://localhost:3001/api/schema/${targetConnectionId}`, {
+          const schemaResponse = await fetch(apiConfig.getApiUrl(`/api/schema/${targetConnectionId}`), {
             headers: {
               Authorization: `Bearer ${token}`,
             },
@@ -677,7 +678,7 @@ export function ChatInterface({ connectionId, sessionId }: ChatInterfaceProps) {
         const controller = new AbortController()
         const timeout = setTimeout(() => controller.abort(), 30000) // 30 second timeout
         try {
-          const response = await fetch(`http://localhost:3001/api/schema/${connectionId}`, {
+          const response = fetch(apiConfig.getApiUrl(`/api/schema/${connectionId}`), {
             headers: {
               Authorization: `Bearer ${token}`,
             },
@@ -785,7 +786,7 @@ export function ChatInterface({ connectionId, sessionId }: ChatInterfaceProps) {
         ? firstUserMessage.substring(0, 47) + "..." 
         : firstUserMessage;
 
-      const response = await fetch("http://localhost:3001/api/chat-sessions", {
+      const response = await fetch(apiConfig.getApiUrl("/api/chat-sessions"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

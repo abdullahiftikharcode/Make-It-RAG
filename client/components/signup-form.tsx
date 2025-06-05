@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useBubble } from "@/hooks/use-bubble"
+import apiConfig from "@/config/api"
 
 export function SignupForm() {
   const [isLoading, setIsLoading] = useState(false)
@@ -27,7 +28,7 @@ export function SignupForm() {
     const name = formData.get("name") as string
 
     try {
-      const response = await fetch("http://localhost:3001/signup", {
+      const response = await fetch(apiConfig.getApiUrl("/signup"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

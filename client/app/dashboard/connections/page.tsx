@@ -9,6 +9,7 @@ import { Database, Edit, Plus, Trash2 } from "lucide-react"
 import Link from "next/link"
 import { useToast } from "@/components/ui/use-toast"
 import { useRouter } from "next/navigation"
+import apiConfig from "@/config/api"
 
 interface Connection {
   id: string
@@ -42,7 +43,7 @@ export default function ConnectionsPage() {
         return
       }
       try {
-        const response = await fetch("http://localhost:3001/api/connections", {
+        const response = await fetch(apiConfig.getApiUrl("/api/connections"), {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -77,7 +78,7 @@ export default function ConnectionsPage() {
       return
     }
     try {
-      const response = await fetch(`http://localhost:3001/api/connections/${connectionId}`, {
+      const response = await fetch(apiConfig.getApiUrl(`/api/connections/${connectionId}`), {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -115,7 +116,7 @@ export default function ConnectionsPage() {
         return
       }
       // Create a new chat session via the API.
-      const response = await fetch("http://localhost:3001/api/chat-sessions", {
+      const response = await fetch(apiConfig.getApiUrl("/api/chat-sessions"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
