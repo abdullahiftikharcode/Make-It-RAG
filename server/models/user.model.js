@@ -8,7 +8,15 @@ class UserModel {
    * @param {string} userId - User ID
    * @returns {Promise<object|null>} User object or null if not found
    */
-    static async findById(userId) {    try {      const [rows] = await promisePool.query(        `SELECT id, name, email, bio, company, role, is_active, subscription_tier,         IF(image IS NOT NULL, CONCAT('data:image/jpeg;base64,', TO_BASE64(image)), null) as image         FROM users WHERE id = ?`,        [userId]      );      return rows.length ? rows[0] : null;
+    static async findById(userId) {
+    try {
+      const [rows] = await promisePool.query(
+        `SELECT id, name, email, bio, company, role, is_active, subscription_tier,
+         IF(image IS NOT NULL, CONCAT('data:image/jpeg;base64,', TO_BASE64(image)), null) as image
+         FROM users WHERE id = ?`,
+        [userId]
+      );
+      return rows.length ? rows[0] : null;
     } catch (error) {
       throw new AppError(`Error finding user: ${error.message}`, 500);
     }
@@ -36,7 +44,24 @@ class UserModel {
    * @param {object} userData - User data object
    * @returns {Promise<object>} Created user object
    */
-    static async create(userData) {    try {      const userId = uuidv4();      const { name, email, passwordHash, role = 'user', subscription_tier = 'personal' } = userData;            const [result] = await promisePool.query(        `INSERT INTO users (id, name, email, password_hash, role, subscription_tier)         VALUES (?, ?, ?, ?, ?, ?)`,        [userId, name, email, passwordHash, role, subscription_tier]      );            // Create default user settings      await promisePool.query(        'INSERT INTO user_settings (user_id) VALUES (?)',        [userId]      );            return { userId, name, email, role, subscription_tier };
+  static async create(userData) {
+    try {
+      const id = uuidv4();
+      const { name, email, passwordHash, role = 'user', subscription_tier = 'personal' } = userData;
+      
+      const [result] = await promisePool.query(
+        `INSERT INTO users (id, name, email, password_hash, role, subscription_tier)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [id, name, email, passwordHash, role, subscription_tier]
+      );
+      
+      // Create default user settings
+      await promisePool.query(
+        'INSERT INTO user_settings (user_id) VALUES (?)',
+        [id]
+      );
+      
+      return { id, name, email, role, subscription_tier };
     } catch (error) {
       if (error.code === 'ER_DUP_ENTRY') {
         throw new AppError('Email already in use', 400);

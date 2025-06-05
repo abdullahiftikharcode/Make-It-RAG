@@ -40,7 +40,7 @@ class AuthService {
       return {
         message: 'User created successfully',
         user: {
-          userId: user.userId,
+          id: user.id,
           name: user.name,
           email: user.email,
           role: user.role
@@ -96,7 +96,7 @@ class AuthService {
         message: 'Successfully logged in',
         token,
         user: {
-          userId: user.id,
+          id: user.id,
           name: user.name,
           email: user.email,
           role: user.role
@@ -159,7 +159,7 @@ class AuthService {
    */
   static generateToken(user) {
     return jwt.sign(
-      { userId: user.id || user.userId, role: user.role },
+      { userId: user.id, role: user.role },
       config.jwtPrivateKey,
       { algorithm: 'RS256', expiresIn: config.jwtExpiresIn }
     );
