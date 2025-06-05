@@ -8,14 +8,15 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useBubble } from "@/hooks/use-bubble"
 import Cookies from 'js-cookie'
+import apiConfig from "@/config/api"
 
 export function LoginForm() {
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
   const searchParams = useSearchParams()
   const { toast } = useBubble()
-  const isRedirecting = useRef(false) // Add ref to track redirect status
-  const tokenChecked = useRef(false) // Add ref to track if token was already checked
+  const isRedirecting = useRef(false)
+  const tokenChecked = useRef(false)
   
   // Get returnUrl from query params if available
   const returnUrl = searchParams.get('returnUrl') || '/dashboard'
@@ -33,7 +34,7 @@ export function LoginForm() {
       }
 
       try {
-        const validateResponse = await fetch("http://localhost:3001/validate-token", {
+        const validateResponse = await fetch(apiConfig.getApiUrl("/validate-token"), {
           method: "GET",
           headers: {
             "Authorization": `Bearer ${storedToken}`,
@@ -99,7 +100,7 @@ export function LoginForm() {
       const email = formData.get("email") as string
       const password = formData.get("password") as string
 
-      const response = await fetch("http://localhost:3001/login", {
+      const response = await fetch(apiConfig.getApiUrl("/login"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -149,11 +150,11 @@ export function LoginForm() {
         }, 100);
       }
     } catch (error) {
+      console.error("Login error:", error)
       toast({
-        title: "Connection Error",
-        description: "Unable to connect to the server. Please check your internet connection and try again.",
+        title: "Error",
+        description: "An error occurred during login. Please try again.",
         variant: "destructive",
-        duration: 5000
       })
     } finally {
       setIsLoading(false)
@@ -163,36 +164,42 @@ export function LoginForm() {
   return (
     <div className="grid gap-6">
       <form onSubmit={onSubmit}>
-        <div className="grid gap-4">
-          <div className="grid gap-2">
-            <Label htmlFor="email">Email</Label>
+        <div className="grid gap-2">
+          <div className="grid gap-1">
+            <Label className="sr-only" htmlFor="email">
+              Email
+            </Label>
             <Input
               id="email"
-              name="email"
               placeholder="name@example.com"
               type="email"
               autoCapitalize="none"
               autoComplete="email"
               autoCorrect="off"
               disabled={isLoading}
-              required
+              name="email"
             />
           </div>
-          <div className="grid gap-2">
-            <Label htmlFor="password">Password</Label>
+          <div className="grid gap-1">
+            <Label className="sr-only" htmlFor="password">
+              Password
+            </Label>
             <Input
               id="password"
-              name="password"
+              placeholder="Password"
               type="password"
               autoCapitalize="none"
               autoComplete="current-password"
               autoCorrect="off"
               disabled={isLoading}
-              required
+              name="password"
             />
           </div>
           <Button disabled={isLoading}>
-            {isLoading ? "Signing in..." : "Sign in"}
+            {isLoading && (
+              <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-primary border-r-transparent" />
+            )}
+            Sign In
           </Button>
         </div>
       </form>
