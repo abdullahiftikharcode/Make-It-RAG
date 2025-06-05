@@ -2,12 +2,18 @@ const mysql = require('mysql2');
 require('dotenv').config();
 
 // Create a connection pool using the DATABASE_URL environment variable
-const pool = mysql.createPool(process.env.DATABASE_URL || {
-  host: process.env.DB_HOST,
-  port: process.env.DB_PORT,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
+const pool = mysql.createPool({
+  ...process.env.DATABASE_URL ? { uri: process.env.DATABASE_URL } : {
+    host: process.env.DB_HOST,
+    port: process.env.DB_PORT,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
+  },
+  ssl: {
+    minVersion: 'TLSv1.2',
+    rejectUnauthorized: true
+  },
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0
