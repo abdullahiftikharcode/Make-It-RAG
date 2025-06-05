@@ -1,29 +1,50 @@
 "use client"
 
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Plus } from "lucide-react"
 import Link from "next/link"
+import { Database } from "lucide-react"
 
 export function EmptyConnections() {
   const container = useRef<HTMLDivElement>(null)
   const anim = useRef<any>(null)
+  const [animationFailed, setAnimationFailed] = useState(false)
 
   useEffect(() => {
-    import('lottie-web').then((Lottie) => {
-      if (container.current) {
-        anim.current = Lottie.default.loadAnimation({
+    let mounted = true
+
+    const loadAnimation = async () => {
+      try {
+        const Lottie = (await import('lottie-web')).default
+        if (!mounted || !container.current) return
+
+        anim.current = Lottie.loadAnimation({
           container: container.current,
           renderer: "svg",
           loop: true,
           autoplay: true,
-          // This is a nice database/connection animation
-          path: "https://lottie.host/2f1445d4-4b3e-4fbe-96d2-ee5d83dfa1ec/YmBvSTbO0l.json",
+          path: "/animations/empty-db.json",
+          rendererSettings: {
+            preserveAspectRatio: "xMidYMid slice",
+            progressiveLoad: true,
+          }
         })
+
+        anim.current.addEventListener('data_failed', () => {
+          if (mounted) setAnimationFailed(true)
+        })
+
+      } catch (error) {
+        if (mounted) setAnimationFailed(true)
+        console.error('Failed to load animation:', error)
       }
-    })
+    }
+
+    loadAnimation()
 
     return () => {
+      mounted = false
       if (anim.current) {
         anim.current.destroy()
       }
@@ -32,7 +53,13 @@ export function EmptyConnections() {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[400px] text-center p-8">
-      <div ref={container} className="w-64 h-64 mb-8" />
+      {animationFailed ? (
+        <div className="w-64 h-64 mb-8 flex items-center justify-center">
+          <Database className="w-24 h-24 text-muted-foreground animate-bounce" />
+        </div>
+      ) : (
+        <div ref={container} className="w-64 h-64 mb-8" />
+      )}
       <h3 className="text-2xl font-semibold tracking-tight mb-2">No Connections Yet</h3>
       <p className="text-muted-foreground mb-8">
         Get started by connecting your first database. It only takes a minute!
