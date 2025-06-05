@@ -42,8 +42,23 @@ if (!config.init()) {
 // Initialize Express app
 const app = express();
 
+// Configure CORS
+const corsOptions = {
+  origin: [
+    'http://localhost:3000',
+    'https://make-it-rag.vercel.app',
+    /\.vercel\.app$/  // Allow all subdomains of vercel.app
+  ],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-api-key'],
+  credentials: true,
+  maxAge: 86400 // 24 hours
+};
+
+// Apply CORS configuration
+app.use(cors(corsOptions));
+
 // Configure middleware
-app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
 
