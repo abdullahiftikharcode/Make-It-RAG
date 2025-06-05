@@ -28,6 +28,7 @@ const settingsRoutes = require('./routes/settings');
 const dashboardRoutes = require('./routes/dashboard');
 const chatSessionsRoutes = require('./routes/chat-sessions');
 const apiKeysRoutes = require('./routes/apikeys');
+const billingRoutes = require('./routes/billing');
 
 // Initialize app configurations
 if (!config.init()) {
@@ -98,6 +99,7 @@ app.use('/api/settings', settingsRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/chat-sessions', chatSessionsRoutes);
 app.use('/api/api-keys', apiKeysRoutes); // Register API key routes
+app.use('/api/billing', billingRoutes);
 
 // Map the /api/change-password to the auth routes' change-password endpoint
 app.use('/api', authRoutes);

@@ -31,8 +31,7 @@ class GeminiModel(AIModel):
     def __init__(self, config):
         genai.configure(api_key=config.api_key)
         self.model_name = config.model_name
-        self.model = genai.GenerativeModel(self.model_name)
-        self.params = config.additional_params
+        self.model = genai.GenerativeModel(self.model_name, generation_config=config.additional_params)
 
     def generate_content(self, prompt):
         return self.model.generate_content(prompt)
@@ -78,16 +77,16 @@ class ModelFactory:
         if subscription_tier == 'corporate':
             # For corporate tier, use the most capable model
             config = ModelConfig(
-                model_name="gemini-1.5-pro",  # High-accuracy model
+                model_name="gemini-2.5-flash-preview-04-17",
                 api_key=api_key,
-                additional_params={"temperature": 0.2}  # Lower temperature for more accurate results
+                additional_params={"temperature": 0.2}
             )
             return GeminiModel(config)
         else:
             # For personal tier, use a more cost-effective model
             config = ModelConfig(
-                model_name="gemini-1.0-pro",  # Cost-efficient model
+                model_name="gemini-1.5-flash",
                 api_key=api_key,
-                additional_params={"temperature": 0.7}  # Higher temperature for personal tier
+                additional_params={"temperature": 0.7}
             )
-            return MistralModel(config) 
+            return GeminiModel(config) 

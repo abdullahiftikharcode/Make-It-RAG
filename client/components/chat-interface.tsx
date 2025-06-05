@@ -89,9 +89,28 @@ interface UserSettings {
   model: string
 }
 
+interface User {
+  id: string
+  subscription_tier: string
+  // ... other user properties
+}
+
 interface ChatInterfaceProps {
   connectionId?: string
   sessionId?: string
+}
+
+// Add this interface for the payload type
+interface ChatPayload {
+  connectionId: string
+  query: string
+  sessionId?: string
+  settings: { 
+    query_timeout: number
+    show_sql_queries: boolean
+    model: string
+  }
+  subscription_tier: string
 }
 
 export function ChatInterface({ connectionId, sessionId }: ChatInterfaceProps) {
@@ -103,6 +122,12 @@ export function ChatInterface({ connectionId, sessionId }: ChatInterfaceProps) {
   const [chatSessions, setChatSessions] = useState<ChatSession[]>([])
   const [settings, setSettings] = useState<UserSettings | null>(null)
   const [selectedModel, setSelectedModel] = useState<string>("gemini-2.0-flash-lite-001")
+  const [userTier, setUserTier] = useState<string>("personal")
+  const [availableModels, setAvailableModels] = useState([
+    { id: "gemini-2.0-flash-lite-001", name: "Gemini 2.0 Flash Lite", tier: "all" },
+    { id: "gemini-1.5-flash", name: "Gemini 1.5 Flash", tier: "all" },
+    { id: "gemini-2.5-flash-preview-04-17", name: "Gemini 2.5 Flash Preview", tier: "corporate" }
+  ]);
   const { toast } = useToast()
   const chatContainerRef = useRef<HTMLDivElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -120,6 +145,48 @@ export function ChatInterface({ connectionId, sessionId }: ChatInterfaceProps) {
   useEffect(() => {
     loadUserSettings()
   }, [])
+
+  // Load user data and handle subscription updates
+  useEffect(() => {
+    const loadUserData = async () => {
+      try {
+        const token = localStorage.getItem("auth_token")
+        if (!token) return
+
+        const response = await fetch('http://localhost:3001/api/profile', {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        
+        if (response.ok) {
+          const userData = await response.json()
+          setUserTier(userData.subscription_tier || "personal")
+        }
+      } catch (error) {
+        console.error('Error loading user data:', error)
+      }
+    };
+
+    const handleSubscriptionUpdate = async (event: Event) => {
+      const customEvent = event as CustomEvent<{ newTier: string }>;
+      // Update the userTier state immediately
+      setUserTier(customEvent.detail.newTier);
+      // Force reload user data to ensure we have the latest
+      await loadUserData();
+      // Reset selected model to ensure it's compatible with new tier
+      setSelectedModel("gemini-2.0-flash-lite-001");
+    };
+
+    // Initial load
+    loadUserData();
+
+    // Add event listener
+    window.addEventListener('subscriptionUpdated', handleSubscriptionUpdate);
+
+    // Cleanup
+    return () => {
+      window.removeEventListener('subscriptionUpdated', handleSubscriptionUpdate as EventListener);
+    };
+  }, []);
 
   const loadChatSession = async (sessionId: string) => {
     try {
@@ -440,16 +507,7 @@ export function ChatInterface({ connectionId, sessionId }: ChatInterfaceProps) {
       }
   
       // Build payload conditionally—include sessionId only if it's valid.
-      const payload: {
-        connectionId: string,
-        query: string,
-        sessionId?: string,
-        settings: { 
-          query_timeout: number, 
-          show_sql_queries: boolean,
-          model: string
-        }
-      } = {
+      const payload: ChatPayload = {
         connectionId: localConnectionId,
         query: input,
         settings: {
@@ -457,6 +515,7 @@ export function ChatInterface({ connectionId, sessionId }: ChatInterfaceProps) {
           show_sql_queries: settings?.show_sql_queries ?? true,
           model: selectedModel
         },
+        subscription_tier: userTier
       }
       if (currentSessionId) {
         payload.sessionId = currentSessionId
@@ -913,9 +972,14 @@ export function ChatInterface({ connectionId, sessionId }: ChatInterfaceProps) {
                   value={selectedModel}
                   onChange={(e) => setSelectedModel(e.target.value)}
                 >
-                  <option value="gemini-2.0-flash-lite-001">gemini-2.0-flash-lite-001</option>
-                  <option value="gemini-1.5-flash">gemini-1.5-flash</option>
-                  <option value="gemini-2.5-flash-preview-04-17">gemini-2.5-flash-preview-04-17</option>
+                  {availableModels
+                    .filter(model => model.tier === "all" || model.tier === userTier)
+                    .map(model => (
+                      <option key={model.id} value={model.id}>
+                        {model.name}
+                      </option>
+                    ))
+                  }
                 </select>
                 <Input
                   placeholder="Ask a question about your database..."

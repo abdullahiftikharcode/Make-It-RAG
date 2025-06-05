@@ -26,9 +26,9 @@ class ModelStrategy(ABC):
 class GeminiProModel(ModelStrategy):
     """Gemini Pro model implementation"""
     
-    def __init__(self, api_key: str, temperature: float = 0.7):
+    def __init__(self, api_key: str, model_name: str = "gemini-2.0-flash-lite-001", temperature: float = 0.7):
         genai.configure(api_key=api_key)
-        self.model_name = "gemini-pro"
+        self.model_name = model_name
         self.model = genai.GenerativeModel(self.model_name, generation_config={
             "temperature": temperature
         })
@@ -37,10 +37,10 @@ class GeminiProModel(ModelStrategy):
         return self.model.generate_content(prompt)
     
     def get_model_name(self) -> str:
-        return "Gemini Pro"
+        return self.model_name
     
     def get_model_description(self) -> str:
-        return "Google's Gemini Pro model - balanced performance"
+        return "Google's Gemini model - balanced performance"
 
 class GeminiUltraModel(ModelStrategy):
     """Gemini Ultra model implementation"""
@@ -117,13 +117,12 @@ class ModelRegistry:
     def _initialize_models(self) -> None:
         """Initialize available models"""
         self.models = {
-            "1": GeminiProModel(self.api_key),
-            "2": GeminiUltraModel(self.api_key),
-            "3": MistralModel(self.api_key),
-            "4": LlamaModel(self.api_key)
+            "gemini-2.0-flash-lite-001": GeminiProModel(self.api_key, "gemini-2.0-flash-lite-001"),
+            "gemini-1.5-flash": GeminiProModel(self.api_key, "gemini-1.5-flash"),
+            "gemini-2.5-flash-preview-04-17": GeminiProModel(self.api_key, "gemini-2.5-flash-preview-04-17")
         }
         # Set default model
-        self.current_model = self.models["1"]
+        self.current_model = self.models["gemini-2.0-flash-lite-001"]
     
     def get_available_models(self) -> List[Dict[str, str]]:
         """Get list of available models with their descriptions"""

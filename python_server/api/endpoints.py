@@ -131,8 +131,13 @@ async def generate_sql(
     Returns:
         Generated SQL query, results, and natural language explanation
     """
-    # If a model was selected in the request, switch to it
+    # Validate model access based on subscription tier
     if req.selected_model_id:
+        if subscription_tier == 'personal' and req.selected_model_id == 'gemini-2.5-flash-preview-04-17':
+            raise HTTPException(
+                status_code=403,
+                detail="Access to this model requires a corporate subscription"
+            )
         model_ctx.select_model(req.selected_model_id)
     
     # Get the current model name for response

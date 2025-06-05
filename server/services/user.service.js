@@ -25,7 +25,8 @@ class UserService {
         email: user.email,
         bio: user.bio,
         company: user.company,
-        image: user.image
+        image: user.image,
+        subscription_tier: user.subscription_tier
       };
     } catch (error) {
       if (error instanceof AppError) {

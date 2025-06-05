@@ -8,11 +8,11 @@ load_dotenv()
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '')
 
 # Model configurations
-GEMINI_MODEL = os.getenv('GEMINI_MODEL', 'gemini-1.0-pro')  # Default model
+GEMINI_MODEL = os.getenv('GEMINI_MODEL', 'gemini-2.0-flash-lite-001')  # Default model
 
 # Subscription tier models
-CORPORATE_MODEL = os.getenv('CORPORATE_MODEL', 'gemini-1.5-pro')
-PERSONAL_MODEL = os.getenv('PERSONAL_MODEL', 'gemini-1.0-pro')
+CORPORATE_MODEL = os.getenv('CORPORATE_MODEL', 'gemini-2.5-flash-preview-04-17')
+PERSONAL_MODEL = os.getenv('PERSONAL_MODEL', 'gemini-1.5-flash')
 
 # Model parameters
 CORPORATE_MODEL_PARAMS = {
