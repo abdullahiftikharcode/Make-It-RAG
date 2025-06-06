@@ -32,37 +32,56 @@ def format_connection_string(db_url: str) -> str:
     try:
         logger.info(f"Received URL: {db_url}")
         
-        # Handle ngrok URLs specifically
-        if "ngrok.io" in db_url:
-            # Parse the URL properly
-            parsed = urlparse(db_url)
-            
-            # Extract components
-            user = parsed.username
-            password = parsed.password
-            host = parsed.hostname
-            port = parsed.port
-            database = parsed.path.lstrip('/')
-            
-            # Ensure all components are properly quoted
-            if user:
-                user = quote_plus(user)
-            if password:
-                password = quote_plus(password)
-            if host:
-                host = host.lstrip('@')  # Remove any leading @ from hostname
-            
-            # Reconstruct the URL
-            if user and password:
-                auth = f"{user}:{password}@"
-            else:
-                auth = ""
-                
-            formatted_url = f"mysql+pymysql://{auth}{host}:{port}/{database}"
-            logger.info(f"Reformatted ngrok URL: {formatted_url}")
-            return formatted_url
+        # If it's already a SQLAlchemy URL, return as is
+        if db_url.startswith(('mysql+pymysql://', 'postgresql://', 'mssql://')):
+            return db_url
         
-        return db_url
+        # Parse the URL
+        parsed = urlparse(db_url)
+        
+        # Extract components
+        user = parsed.username
+        password = parsed.password
+        host = parsed.hostname
+        port = parsed.port
+        database = parsed.path.lstrip('/')
+        
+        # Handle special case where the URL might be a simple connection string
+        if not host and not parsed.scheme:
+            parts = db_url.split('@')
+            if len(parts) == 2:
+                auth, host_part = parts
+                user, password = auth.split(':')
+                host_part = host_part.split('/')
+                if len(host_part) == 2:
+                    host_port, database = host_part
+                    if ':' in host_port:
+                        host, port = host_port.split(':')
+                    else:
+                        host = host_port
+                        port = '3306'  # Default MySQL port
+        
+        # Ensure all components are properly quoted
+        if user:
+            user = quote_plus(user)
+        if password:
+            password = quote_plus(password)
+        if host:
+            host = host.lstrip('@')  # Remove any leading @ from hostname
+        
+        # Set default port for MySQL if not provided
+        if not port:
+            port = '3306'
+        
+        # Reconstruct the URL
+        if user and password:
+            auth = f"{user}:{password}@"
+        else:
+            auth = ""
+            
+        formatted_url = f"mysql+pymysql://{auth}{host}:{port}/{database}"
+        logger.info(f"Reformatted MySQL URL: {formatted_url}")
+        return formatted_url
         
     except Exception as e:
         logger.error(f"Error formatting connection string: {str(e)}")

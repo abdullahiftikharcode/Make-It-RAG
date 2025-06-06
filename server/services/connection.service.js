@@ -66,16 +66,25 @@ class ConnectionService {
         throw new AppError('Invalid database type', 400);
       }
       
+      // Ensure connection string has the correct format for MySQL
+      let formattedConnectionString = connectionString;
+      if (type === 'mysql' && !connectionString.startsWith('mysql+pymysql://')) {
+        // If it's a simple format (user:pass@host:port/db), convert it
+        if (!connectionString.includes('://')) {
+          formattedConnectionString = `mysql+pymysql://${connectionString}`;
+        }
+      }
+      
       // Verify that the connection string works by testing connection
       try {
-        await PythonService.getSchema(connectionString);
+        await PythonService.getSchema(formattedConnectionString);
       } catch (error) {
         throw new AppError('Could not connect to database', 400, 
           'Failed to establish a connection. Please verify your connection string.');
       }
       
       // Create the connection
-      return await ConnectionModel.create({ name, type, connectionString }, userId);
+      return await ConnectionModel.create({ name, type, connectionString: formattedConnectionString }, userId);
     } catch (error) {
       if (error instanceof AppError) {
         throw error;
