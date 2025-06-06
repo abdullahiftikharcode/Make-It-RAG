@@ -1,6 +1,32 @@
 import os
 import uvicorn
 from dotenv import load_dotenv
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from python_server.api.endpoints import router
+from python_server.dependencies import setup_dependencies
+
+app = FastAPI()
+
+# Setup CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Setup dependencies
+setup_dependencies()
+
+# Include routers
+app.include_router(router)
+
+# Health check endpoint
+@app.get("/health")
+def health_check():
+    return {"status": "healthy"}
 
 if __name__ == "__main__":
     # Load environment variables
