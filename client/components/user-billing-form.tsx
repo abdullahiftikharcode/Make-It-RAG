@@ -6,10 +6,10 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Separator } from "@/components/ui/separator"
-import { useBubble } from "@/hooks/use-bubble"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { toast } from "sonner"
 import apiConfig from "@/config/api"
 
 interface Plan {
@@ -71,7 +71,6 @@ export function UserBillingForm() {
     expiry_year: "",
     is_default: true
   })
-  const { toast } = useBubble()
 
   // Load initial data
   useEffect(() => {
@@ -83,11 +82,7 @@ export function UserBillingForm() {
       setIsLoading(true)
       const token = localStorage.getItem("auth_token")
       if (!token) {
-        toast({
-          title: "Error",
-          description: "Please log in to continue.",
-          variant: "destructive",
-        })
+        toast.error("Please log in to continue.")
         return
       }
 
@@ -121,11 +116,7 @@ export function UserBillingForm() {
       setBillingHistory(Array.isArray(historyData) ? historyData : [])
     } catch (error) {
       console.error('Error loading billing data:', error)
-      toast({
-        title: "Error",
-        description: "Failed to load billing information. Please try again.",
-        variant: "destructive",
-      })
+      toast.error(error instanceof Error ? error.message : "Failed to load billing data")
     } finally {
       setIsLoading(false)
     }
@@ -138,11 +129,7 @@ export function UserBillingForm() {
     try {
       const token = localStorage.getItem("auth_token")
       if (!token) {
-        toast({
-          title: "Error",
-          description: "Please log in to continue.",
-          variant: "destructive",
-        })
+        toast.error("Please log in to continue.")
         return
       }
 
@@ -160,17 +147,10 @@ export function UserBillingForm() {
       }
 
       await loadBillingData()
+      toast.success("Payment method added successfully.")
       setShowAddCard(false)
-      toast({
-        title: "Success",
-        description: "Payment method added successfully.",
-      })
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to add payment method. Please try again.",
-        variant: "destructive",
-      })
+      toast.error("Failed to add payment method. Please try again.")
     } finally {
       setIsLoading(false)
     }
@@ -183,11 +163,7 @@ export function UserBillingForm() {
     try {
       const token = localStorage.getItem("auth_token")
       if (!token) {
-        toast({
-          title: "Error",
-          description: "Please log in to continue.",
-          variant: "destructive",
-        })
+        toast.error("Please log in to continue.")
         return
       }
 
@@ -200,11 +176,7 @@ export function UserBillingForm() {
       // Get default payment method
       const defaultPaymentMethod = paymentMethods.find(pm => pm.is_default)
       if (!defaultPaymentMethod && plan.price > 0) {
-        toast({
-          title: "Error",
-          description: "Please add a payment method first.",
-          variant: "destructive",
-        })
+        toast.error("Please add a payment method first.")
         return
       }
 
@@ -235,21 +207,14 @@ export function UserBillingForm() {
       });
       window.dispatchEvent(event);
       
-      toast({
-        title: "Success",
-        description: "Subscription updated successfully.",
-      })
+      toast.success("Subscription updated successfully.")
     } catch (error) {
       console.error('Subscription update error:', error)
       let errorMessage = 'Failed to update subscription. Please try again.'
       if (error instanceof Error) {
         errorMessage = error.message
       }
-      toast({
-        title: "Error",
-        description: errorMessage,
-        variant: "destructive",
-      })
+      toast.error(errorMessage)
     } finally {
       setIsLoading(false)
     }
@@ -262,11 +227,7 @@ export function UserBillingForm() {
     try {
       const token = localStorage.getItem("auth_token")
       if (!token) {
-        toast({
-          title: "Error",
-          description: "Please log in to continue.",
-          variant: "destructive",
-        })
+        toast.error("Please log in to continue.")
         return
       }
 
@@ -280,16 +241,9 @@ export function UserBillingForm() {
       }
 
       await loadBillingData()
-      toast({
-        title: "Success",
-        description: "Subscription cancelled successfully.",
-      })
+      toast.success("Subscription cancelled successfully.")
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to cancel subscription. Please try again.",
-        variant: "destructive",
-      })
+      toast.error("Failed to cancel subscription. Please try again.")
     } finally {
       setIsLoading(false)
     }
