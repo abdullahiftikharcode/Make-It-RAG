@@ -30,7 +30,7 @@ export default function HistoryPage() {
           })
           return
         }
-        const response = await fetch(apiConfig.getApiUrl("/api/chats"), {
+        const response = await fetch(apiConfig.getApiUrl("/api/chat-sessions"), {
           method: "GET",
           headers: {
             Authorization: `Bearer ${token}`,
@@ -57,7 +57,7 @@ export default function HistoryPage() {
 
   // Filter sessions based on search input
   const filteredSessions = sessions.filter((session) =>
-    session.title.toLowerCase().includes(search.toLowerCase())
+    session.title?.toLowerCase().includes(search.toLowerCase())
   )
 
     return (
@@ -126,12 +126,12 @@ export default function HistoryPage() {
         return
       }
                           const response = await fetch(
-                            apiConfig.getApiUrl(`/api/chats/${session.id}`),
+                            apiConfig.getApiUrl(`/api/chat-sessions/${session.id}`),
                             {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+                              method: "DELETE",
+                              headers: {
+                                Authorization: `Bearer ${token}`,
+                              },
                             }
                           )
       if (!response.ok) {
