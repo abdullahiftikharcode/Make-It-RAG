@@ -5,7 +5,7 @@ import { DashboardHeader } from "@/components/dashboard-header"
 import { DashboardShell } from "@/components/dashboard-shell"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Database, Plus } from "lucide-react"
+import { Database, MessageSquare, Plus, Activity } from "lucide-react"
 import Link from "next/link"
 import apiConfig from "@/config/api"
 
@@ -107,8 +107,8 @@ export default function DashboardPage() {
         if (!response.ok) {
           throw new Error(data.error || "Failed to load recent chats")
         }
-        // Assuming the API returns a sessions array containing recent chats
-        setRecentChats(data.sessions)
+        // Only show the three most recent chats
+        setRecentChats(data.sessions.slice(0, 3))
       } catch (error: any) {
         console.error("Error loading recent chats:", error.message)
       } finally {
@@ -135,7 +135,7 @@ export default function DashboardPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Queries</CardTitle>
-            <Database className="h-4 w-4 text-muted-foreground" />
+            <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.totalQueries}</div>
@@ -159,7 +159,7 @@ export default function DashboardPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Saved Chats</CardTitle>
-            <Database className="h-4 w-4 text-muted-foreground" />
+            <MessageSquare className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.savedChats}</div>
@@ -186,9 +186,22 @@ export default function DashboardPage() {
               <div className="space-y-4">
                 {recentConnections.map((connection) => (
                   <div key={connection.id} className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium">{connection.name}</p>
-                      <p className="text-sm text-muted-foreground">{connection.type}</p>
+                    <div className="flex items-center">
+                      <div className="mr-3">
+                        {connection.type === 'postgresql' ? (
+                          <img src="/icons/postgresql.svg" alt="PostgreSQL" className="h-6 w-6" />
+                        ) : connection.type === 'mysql' ? (
+                          <img src="/icons/mysql.svg" alt="MySQL" className="h-6 w-6" />
+                        ) : connection.type === 'sqlserver' ? (
+                          <img src="/icons/sqlserver.svg" alt="SQL Server" className="h-6 w-6" />
+                        ) : (
+                          <Database className="h-6 w-6 text-muted-foreground" />
+                        )}
+                      </div>
+                      <div>
+                        <p className="font-medium">{connection.name}</p>
+                        <p className="text-sm text-muted-foreground capitalize">{connection.type}</p>
+                      </div>
                     </div>
                     <Link href={`/dashboard/connections/${connection.id}`}>
                       <Button variant="ghost" size="sm">

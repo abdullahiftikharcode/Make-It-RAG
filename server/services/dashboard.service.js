@@ -141,7 +141,7 @@ class DashboardService {
    * @param {number} limit - Maximum number of sessions to return
    * @returns {Promise<object>} Object with sessions array
    */
-  static async getRecentChats(userId, limit = 5) {
+  static async getRecentChats(userId, limit = 3) {
     try {
       return await ChatService.getRecentSessions(userId, limit);
     } catch (error) {
