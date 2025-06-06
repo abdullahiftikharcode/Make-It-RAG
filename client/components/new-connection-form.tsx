@@ -21,10 +21,10 @@ export function NewConnectionForm() {
     setIsLoading(true)
 
     try {
-      const formData = new FormData(event.currentTarget)
-      const name = formData.get("name") as string
-      const type = formData.get("type") as string
-      const connectionString = formData.get("connection-string") as string
+    const formData = new FormData(event.currentTarget)
+    const name = formData.get("name") as string
+    const type = formData.get("type") as string
+    const connectionString = formData.get("connection-string") as string
 
       const token = localStorage.getItem("auth_token")
       if (!token) {
@@ -57,10 +57,10 @@ export function NewConnectionForm() {
         throw new Error(data.error || "Failed to create connection")
       }
 
-      toast({
+        toast({
         title: "Success",
         description: "Database connection created successfully.",
-      })
+        })
 
       router.push("/dashboard/connections")
     } catch (error) {
@@ -75,63 +75,63 @@ export function NewConnectionForm() {
   }
 
   return (
-    <Card>
-      <CardHeader>
+      <Card>
+        <CardHeader>
         <CardTitle>New Connection</CardTitle>
         <CardDescription>Add a new database connection.</CardDescription>
-      </CardHeader>
+        </CardHeader>
       <form onSubmit={onSubmit}>
         <CardContent className="space-y-4">
           <div className="grid gap-2">
-            <Label htmlFor="name">Connection Name</Label>
+              <Label htmlFor="name">Connection Name</Label>
             <Input id="name" name="name" placeholder="My Database" required />
-          </div>
+            </div>
           <div className="grid gap-2">
-            <Label>Database Type</Label>
+              <Label>Database Type</Label>
             <RadioGroup defaultValue="mysql" name="type" className="grid grid-cols-3 gap-4">
-              <div>
+                <div>
                 <RadioGroupItem value="mysql" id="mysql" className="peer sr-only" />
-                <Label
+                  <Label
                   htmlFor="mysql"
                   className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer"
                 >
                   <Database className="mb-3 h-6 w-6" />
                   <span className="text-sm font-medium">MySQL</span>
-                </Label>
-              </div>
-              <div>
+                  </Label>
+                </div>
+                <div>
                 <RadioGroupItem value="postgresql" id="postgresql" className="peer sr-only" />
-                <Label
+                  <Label
                   htmlFor="postgresql"
                   className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer"
                 >
                   <Table2 className="mb-3 h-6 w-6" />
                   <span className="text-sm font-medium">PostgreSQL</span>
-                </Label>
-              </div>
-              <div>
+                  </Label>
+                </div>
+                <div>
                 <RadioGroupItem value="mssql" id="mssql" className="peer sr-only" />
-                <Label
+                  <Label
                   htmlFor="mssql"
                   className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer"
                 >
                   <Server className="mb-3 h-6 w-6" />
                   <span className="text-sm font-medium">SQL Server</span>
-                </Label>
-              </div>
-            </RadioGroup>
-          </div>
+                  </Label>
+                </div>
+              </RadioGroup>
+            </div>
           <div className="grid gap-2">
-            <Label htmlFor="connection-string">Connection String</Label>
-            <Input 
-              id="connection-string" 
-              name="connection-string" 
+              <Label htmlFor="connection-string">Connection String</Label>
+              <Input
+                id="connection-string"
+                name="connection-string"
               placeholder="mysql://user:password@localhost:3306/database"
-              required 
-            />
+                required
+              />
             <p className="text-sm text-muted-foreground">
               Format: protocol://user:password@host:port/database
-            </p>
+              </p>
           </div>
         </CardContent>
         <CardFooter>
@@ -140,7 +140,7 @@ export function NewConnectionForm() {
           </Button>
         </CardFooter>
       </form>
-    </Card>
+      </Card>
   )
 }
 

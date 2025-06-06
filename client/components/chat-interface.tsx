@@ -199,8 +199,10 @@ export function ChatInterface({ connectionId, sessionId }: ChatInterfaceProps) {
         return
       }
   
-
-      const response = await fetch(apiConfig.getApiUrl(`/api/chat-sessions/${sessionId}`), {
+      // Remove sess- prefix if it exists
+      const cleanSessionId = sessionId.startsWith("sess-") ? sessionId.replace("sess-", "") : sessionId
+  
+      const response = await fetch(apiConfig.getApiUrl(`/api/chat-sessions/${cleanSessionId}`), {
         headers: { Authorization: `Bearer ${token}` },
       })
   
@@ -466,10 +468,11 @@ export function ChatInterface({ connectionId, sessionId }: ChatInterfaceProps) {
       ) {
         currentSessionId = undefined
       }
-      else if (currentSessionId.startsWith("sess-"))
-{
-  currentSessionId =currentSessionId.replace("sess-", "")
-}  
+      // Remove sess- prefix if it exists
+      else if (currentSessionId.startsWith("sess-")) {
+        currentSessionId = currentSessionId.replace("sess-", "")
+      }
+  
       // Determine proper connectionId.
       // If we have a sessionId, attempt to fetch session details using both sessionId and connectionId concurrently.
       let localConnectionId = connectionId
@@ -577,13 +580,13 @@ export function ChatInterface({ connectionId, sessionId }: ChatInterfaceProps) {
       // Get current session ID from URL if it exists
       const urlParts = window.location.pathname.split('/')
       const currentSessionId = urlParts[urlParts.length - 1]
-      const isValidSessionId = currentSessionId !== connectionId
-      var cleanid =''
+      const isValidSessionId = currentSessionId !== connectionId && currentSessionId !== "new"
+      
+      // Clean the session ID by removing sess- prefix if it exists
+      const cleanSessionId = currentSessionId.startsWith("sess-") ? currentSessionId.replace("sess-", "") : currentSessionId
+
       if (isValidSessionId) {
-        if (currentSessionId.startsWith("sess-")) {
-            cleanid = currentSessionId.replace("sess-", "");
-        }
-        const sessionResponse = await fetch(apiConfig.getApiUrl(`/api/chat-sessions/${cleanid}`), {
+        const sessionResponse = await fetch(apiConfig.getApiUrl(`/api/chat-sessions/${cleanSessionId}`), {
           headers: {
             Authorization: `Bearer ${token}`,
           },
