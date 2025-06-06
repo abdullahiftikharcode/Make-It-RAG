@@ -91,6 +91,7 @@ class PythonService {
             method: 'GET',
             headers: {
               'Content-Type': 'application/json',
+              'Accept': 'application/json'
             },
             signal: controller.signal
           }
@@ -99,11 +100,16 @@ class PythonService {
         clearTimeout(timeout);
         
         if (!response.ok) {
-          const errorData = await response.json();
+          const errorData = await response.json().catch(() => ({ detail: 'Unknown error' }));
           throw new AppError(errorData.detail || 'Error from Python server', response.status);
         }
         
-        return await response.json();
+        const data = await response.json();
+        if (!data || !data.schema) {
+          throw new AppError('Invalid schema format received from server', 500);
+        }
+        
+        return data;
       } catch (error) {
         clearTimeout(timeout);
         
