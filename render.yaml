@@ -1,11 +1,18 @@
 services:
   - type: web
     name: text-to-sql-server
-    env: docker
-    dockerfilePath: ./Dockerfile
+    runtime: python3.9
+    buildCommand: pip install -r python_server/requirements.txt
+    startCommand: python -m python_server.main
     envVars:
       - key: GEMINI_API_KEY
         sync: false
+      - key: PORT
+        value: 10000
+      - key: HOST
+        value: 0.0.0.0
+      - key: RELOAD
+        value: False
     healthCheckPath: /health
     plan: starter
-    numInstances: 1 
+    autoDeploy: true 
