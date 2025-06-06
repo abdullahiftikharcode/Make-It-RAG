@@ -31,7 +31,7 @@ type DatabaseType = keyof typeof databaseIcons;
 interface RecentConnection {
   id: string;
   name: string;
-  type: DatabaseType;
+  type: string;
   isActive: boolean;
 }
 
@@ -101,6 +101,8 @@ export default function DashboardPage() {
         if (!response.ok) {
           throw new Error(data.error || "Failed to load recent connections")
         }
+        console.log("Recent connections data:", data.connections)
+        console.log("Database icons mapping:", databaseIcons)
         setRecentConnections(data.connections)
       } catch (error: any) {
         console.error("Error loading recent connections:", error.message)
@@ -208,34 +210,39 @@ export default function DashboardPage() {
               <p className="text-sm text-muted-foreground">No recent connections found.</p>
             ) : (
               <div className="space-y-4">
-                {recentConnections.map((connection) => (
-                  <div key={connection.id} className="flex items-center justify-between">
-                    <div className="flex items-center">
-                      <div className="mr-3 flex items-center justify-center w-6 h-6">
-                        {connection.type in databaseIcons ? (
-                          <Image
-                            src={databaseIcons[connection.type as keyof typeof databaseIcons].src}
-                            alt={databaseIcons[connection.type as keyof typeof databaseIcons].alt}
-                            width={24}
-                            height={24}
-                            priority
-                          />
-                        ) : (
-                          <Database className="h-6 w-6 text-muted-foreground" />
-                        )}
+                {recentConnections.map((connection) => {
+                  const connectionType = connection.type.toLowerCase();
+                  const hasIcon = connectionType in databaseIcons;
+                  
+                  return (
+                    <div key={connection.id} className="flex items-center justify-between">
+                      <div className="flex items-center">
+                        <div className="mr-3 flex items-center justify-center w-6 h-6">
+                          {hasIcon ? (
+                            <Image
+                              src={databaseIcons[connectionType as DatabaseType].src}
+                              alt={databaseIcons[connectionType as DatabaseType].alt}
+                              width={24}
+                              height={24}
+                              priority
+                            />
+                          ) : (
+                            <Database className="h-6 w-6 text-muted-foreground" />
+                          )}
+                        </div>
+                        <div>
+                          <p className="font-medium">{connection.name}</p>
+                          <p className="text-sm text-muted-foreground capitalize">{connection.type}</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-medium">{connection.name}</p>
-                        <p className="text-sm text-muted-foreground capitalize">{connection.type}</p>
-                      </div>
+                      <Link href={`/dashboard/connections/${connection.id}`}>
+                        <Button variant="ghost" size="sm">
+                          View
+                        </Button>
+                      </Link>
                     </div>
-                    <Link href={`/dashboard/connections/${connection.id}`}>
-                      <Button variant="ghost" size="sm">
-                        View
-                      </Button>
-                    </Link>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             )}
           </CardContent>
