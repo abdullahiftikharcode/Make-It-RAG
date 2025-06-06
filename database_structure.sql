@@ -48,9 +48,11 @@ CREATE TABLE chat_messages (
     role ENUM('user', 'assistant', 'system') NOT NULL,
     content TEXT NOT NULL,
     sql_query TEXT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    sequence_number INT NOT NULL,
+    created_at TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP(6),
     FOREIGN KEY (session_id) REFERENCES chat_sessions(id) ON DELETE CASCADE,
-    INDEX idx_session_id (session_id)
+    INDEX idx_session_id (session_id),
+    UNIQUE KEY unique_session_sequence (session_id, sequence_number)
 );
 CREATE TABLE user_settings (
     user_id VARCHAR(36) PRIMARY KEY,

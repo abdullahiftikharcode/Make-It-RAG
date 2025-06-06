@@ -34,12 +34,12 @@ class ChatModel {
       
       const session = sessions[0];
       
-      // Then, get all messages for this session
+      // Then, get all messages for this session, ordered by sequence number
       const [messages] = await promisePool.query(
         `SELECT id, role, content, sql_query, created_at
          FROM chat_messages
          WHERE session_id = ?
-         ORDER BY created_at ASC`,
+         ORDER BY sequence_number ASC`,
         [sessionId]
       );
       
@@ -223,25 +223,35 @@ class ChatModel {
       const userMessageId = uuidv4();
       const assistantMessageId = uuidv4();
       
+      // Get the current max sequence number for this session
+      const [maxSeq] = await promisePool.query(
+        `SELECT COALESCE(MAX(sequence_number), -1) as max_seq 
+         FROM chat_messages 
+         WHERE session_id = ?`,
+        [sessionId]
+      );
+      const nextSeq = maxSeq[0].max_seq + 1;
+      
       // Insert the user's message first
       await promisePool.query(
         `INSERT INTO chat_messages 
-         (id, session_id, role, content, sql_query, created_at)
-         VALUES (?, ?, ?, ?, NULL, NOW())`,
-        [userMessageId, sessionId, 'user', data.query]
+         (id, session_id, role, content, sql_query, sequence_number, created_at)
+         VALUES (?, ?, ?, ?, NULL, ?, NOW(6))`,
+        [userMessageId, sessionId, 'user', data.query, nextSeq]
       );
       
       // Then insert the assistant's response
       await promisePool.query(
         `INSERT INTO chat_messages 
-         (id, session_id, role, content, sql_query, created_at)
-         VALUES (?, ?, ?, ?, ?, NOW() + INTERVAL 1 SECOND)`,
+         (id, session_id, role, content, sql_query, sequence_number, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, NOW(6))`,
         [
           assistantMessageId,
           sessionId,
           'assistant',
           data.explanation,
-          data.sqlQuery
+          data.sqlQuery,
+          nextSeq + 1
         ]
       );
       
@@ -274,12 +284,21 @@ class ChatModel {
     try {
       const messageId = uuidv4();
       
+      // Get the current max sequence number for this session
+      const [maxSeq] = await promisePool.query(
+        `SELECT COALESCE(MAX(sequence_number), -1) as max_seq 
+         FROM chat_messages 
+         WHERE session_id = ?`,
+        [sessionId]
+      );
+      const nextSeq = maxSeq[0].max_seq + 1;
+      
       // Insert the message
       await promisePool.query(
         `INSERT INTO chat_messages 
-         (id, session_id, role, content, sql_query, created_at)
-         VALUES (?, ?, ?, ?, ?, NOW())`,
-        [messageId, sessionId, role, content, sqlQuery]
+         (id, session_id, role, content, sql_query, sequence_number, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, NOW(6))`,
+        [messageId, sessionId, role, content, sqlQuery, nextSeq]
       );
       
       // Update the session's updated_at timestamp
