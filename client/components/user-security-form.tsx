@@ -7,12 +7,11 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
-import { useBubble } from "@/hooks/use-bubble"
+import { toast } from "sonner"
 import apiConfig from "@/config/api"
 
 export function UserSecurityForm() {
   const [isLoading, setIsLoading] = useState(false)
-  const { toast } = useBubble()
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -26,11 +25,10 @@ export function UserSecurityForm() {
 
     // Validate passwords match
     if (newPassword !== confirmPassword) {
-      toast({
-        title: "Error",
-        description: "New passwords do not match.",
-        variant: "destructive",
-      })
+      toast.error("New passwords do not match.", {
+        position: "top-right",
+        duration: 5000,
+      });
       setIsLoading(false)
       return
     }
@@ -38,11 +36,10 @@ export function UserSecurityForm() {
     try {
       const token = localStorage.getItem("auth_token")
       if (!token) {
-        toast({
-          title: "Error",
-          description: "Please log in to continue.",
-          variant: "destructive",
-        })
+        toast.error("Please log in to continue.", {
+          position: "top-right",
+          duration: 5000,
+        });
         return
       }
 
@@ -67,16 +64,15 @@ export function UserSecurityForm() {
       // Clear form
       event.currentTarget.reset()
 
-      toast({
-        title: "Success",
-        description: "Your password has been updated.",
-      })
+      toast.success("Your password has been updated.", {
+        position: "top-right",
+        duration: 3000,
+      });
     } catch (error) {
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to change password",
-        variant: "destructive",
-      })
+      toast.error(error instanceof Error ? error.message : "Failed to change password", {
+        position: "top-right",
+        duration: 5000,
+      });
     } finally {
       setIsLoading(false)
     }

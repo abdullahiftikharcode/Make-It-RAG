@@ -2,6 +2,7 @@
 
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
+import { toast } from "sonner"
 import apiConfig from "@/config/api"
 
 export function AuthCheck() {
@@ -9,31 +10,33 @@ export function AuthCheck() {
 
   useEffect(() => {
     const checkAuth = async () => {
-      const token = localStorage.getItem('auth_token')
-      if (!token) return
+      const token = localStorage.getItem("auth_token")
+      if (!token) {
+        toast.error("Please log in to continue.", {
+          position: "top-right",
+          duration: 5000
+        });
+        router.push("/login")
+        return
+      }
 
       try {
-        // Validate token with server
-        const response = await fetch(apiConfig.getApiUrl("/validate-token"), {
-          method: "GET",
+        const response = await fetch(apiConfig.getApiUrl("/api/auth/check"), {
           headers: {
-            "Authorization": `Bearer ${token}`,
-            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
           },
         })
 
-        if (response.ok) {
-          // Token is valid, redirect to dashboard
-          router.push("/dashboard")
-        } else {
-          // Token is invalid or expired, clear storage
-          localStorage.removeItem('auth_token')
-          localStorage.removeItem('user_data')
+        if (!response.ok) {
+          throw new Error("Authentication failed")
         }
       } catch (error) {
-        // Network error or other issues, clear storage
-        localStorage.removeItem('auth_token')
-        localStorage.removeItem('user_data')
+        toast.error("Authentication failed. Please log in again.", {
+          position: "top-right",
+          duration: 5000
+        });
+        localStorage.removeItem("auth_token")
+        router.push("/login")
       }
     }
 

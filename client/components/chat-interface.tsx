@@ -6,7 +6,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Database, Save } from "lucide-react"
-import { useToast } from "@/components/ui/use-toast"
+import { toast } from "sonner"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import apiConfig from "@/config/api"
@@ -129,7 +129,6 @@ export function ChatInterface({ connectionId, sessionId }: ChatInterfaceProps) {
     { id: "gemini-1.5-flash", name: "Gemini 1.5 Flash", tier: "all" },
     { id: "gemini-2.5-flash-preview-04-17", name: "Gemini 2.5 Flash Preview", tier: "corporate" }
   ]);
-  const { toast } = useToast()
   const chatContainerRef = useRef<HTMLDivElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
@@ -193,10 +192,9 @@ export function ChatInterface({ connectionId, sessionId }: ChatInterfaceProps) {
     try {
       const token = localStorage.getItem("auth_token")
       if (!token) {
-        toast({
-          title: "Error",
-          description: "Please log in to continue.",
-          variant: "destructive",
+        toast.error("Please log in to continue.", {
+          position: "top-right",
+          duration: 5000
         })
         return
       }
@@ -254,10 +252,9 @@ export function ChatInterface({ connectionId, sessionId }: ChatInterfaceProps) {
           localStorage.setItem(schemaKey, JSON.stringify(transformedSchema))
         } catch (schemaError) {
           console.error("Error fetching schema:", schemaError)
-          toast({
-            title: "Error",
-            description: schemaError instanceof Error ? schemaError.message : "Failed to fetch schema",
-            variant: "destructive",
+          toast.error(schemaError instanceof Error ? schemaError.message : "Failed to fetch schema", {
+            position: "top-right",
+            duration: 5000
           })
           setSchema([])
         } finally {
@@ -274,10 +271,9 @@ export function ChatInterface({ connectionId, sessionId }: ChatInterfaceProps) {
       }
     } catch (error) {
       console.error("Error loading chat session:", error)
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to load chat session",
-        variant: "destructive",
+      toast.error(error instanceof Error ? error.message : "Failed to load chat session", {
+        position: "top-right",
+        duration: 5000
       })
     }
   }
@@ -287,10 +283,9 @@ export function ChatInterface({ connectionId, sessionId }: ChatInterfaceProps) {
     try {
       const token = localStorage.getItem("auth_token")
       if (!token) {
-        toast({
-          title: "Error",
-          description: "Please log in to continue.",
-          variant: "destructive",
+        toast.error("Please log in to continue.", {
+          position: "top-right",
+          duration: 5000
         })
         return
       }
@@ -339,10 +334,9 @@ export function ChatInterface({ connectionId, sessionId }: ChatInterfaceProps) {
       }
     } catch (error) {
       console.error("Error loading connection chats:", error)
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to load chat sessions",
-        variant: "destructive",
+      toast.error(error instanceof Error ? error.message : "Failed to load chat sessions", {
+        position: "top-right",
+        duration: 5000
       })
     }
   }
@@ -392,10 +386,9 @@ export function ChatInterface({ connectionId, sessionId }: ChatInterfaceProps) {
     try {
       const token = localStorage.getItem("auth_token")
       if (!token) {
-        toast({
-          title: "Error",
-          description: "Please log in to continue.",
-          variant: "destructive",
+        toast.error("Please log in to continue.", {
+          position: "top-right",
+          duration: 5000
         })
         return
       }
@@ -414,10 +407,9 @@ export function ChatInterface({ connectionId, sessionId }: ChatInterfaceProps) {
       setSettings(data)
     } catch (error) {
       console.error('Error loading settings:', error)
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to load settings",
-        variant: "destructive",
+      toast.error(error instanceof Error ? error.message : "Failed to load settings", {
+        position: "top-right",
+        duration: 5000
       })
     }
   }
@@ -455,10 +447,9 @@ export function ChatInterface({ connectionId, sessionId }: ChatInterfaceProps) {
     try {
       const token = localStorage.getItem("auth_token")
       if (!token) {
-        toast({
-          title: "Error",
-          description: "Please log in to continue.",
-          variant: "destructive",
+        toast.error("Please log in to continue.", {
+          position: "top-right",
+          duration: 5000
         })
         return
       }
@@ -576,10 +567,9 @@ export function ChatInterface({ connectionId, sessionId }: ChatInterfaceProps) {
     try {
       const token = localStorage.getItem("auth_token")
       if (!token) {
-        toast({
-          title: "Error",
-          description: "Please log in to continue.",
-          variant: "destructive",
+        toast.error("Please log in to continue.", {
+          position: "top-right",
+          duration: 5000
         })
         return
       }
@@ -746,12 +736,11 @@ export function ChatInterface({ connectionId, sessionId }: ChatInterfaceProps) {
       }
     } catch (error) {
       console.error("Schema fetch error:", error)
-      toast({
-        title: "Error",
-        description: error instanceof Error 
-          ? error.message 
-          : "Failed to fetch schema. Please try again or check your database connection.",
-        variant: "destructive",
+      toast.error(error instanceof Error 
+        ? error.message 
+        : "Failed to fetch schema. Please try again or check your database connection.", {
+        position: "top-right",
+        duration: 5000
       })
       setSchema([])
     } finally {
@@ -761,10 +750,9 @@ export function ChatInterface({ connectionId, sessionId }: ChatInterfaceProps) {
 
   const handleSaveChat = async () => {
     if (!connectionId || connectionId === "new") {
-      toast({
-        title: "Error",
-        description: "Please connect to a database first.",
-        variant: "destructive",
+      toast.error("Please connect to a database first.", {
+        position: "top-right",
+        duration: 5000
       });
       return;
     }
@@ -772,10 +760,9 @@ export function ChatInterface({ connectionId, sessionId }: ChatInterfaceProps) {
     try {
       const token = localStorage.getItem("auth_token");
       if (!token) {
-        toast({
-          title: "Error",
-          description: "Please log in to save chat.",
-          variant: "destructive",
+        toast.error("Please log in to save chat.", {
+          position: "top-right",
+          duration: 5000
         });
         return;
       }
@@ -809,16 +796,15 @@ export function ChatInterface({ connectionId, sessionId }: ChatInterfaceProps) {
         throw new Error(data.error || "Failed to save chat");
       }
 
-      toast({
-        title: "Success",
-        description: "Chat session saved successfully!",
+      toast.success("Chat session saved successfully!", {
+        position: "top-right",
+        duration: 3000
       });
     } catch (error) {
       console.error("Error saving chat:", error);
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to save chat",
-        variant: "destructive",
+      toast.error(error instanceof Error ? error.message : "Failed to save chat", {
+        position: "top-right",
+        duration: 5000
       });
     }
   };

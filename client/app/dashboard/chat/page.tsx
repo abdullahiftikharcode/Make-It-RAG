@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Database, MessageSquare, Plus } from "lucide-react"
 import Link from "next/link"
-import { useToast } from "@/components/ui/use-toast"
+import { useRouter } from "next/navigation"
+import { toast } from "sonner"
 import apiConfig from "@/config/api"
 
 interface ChatSession {
@@ -23,17 +24,15 @@ interface ChatSession {
 export default function ChatPage() {
   const [sessions, setSessions] = useState<ChatSession[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const { toast } = useToast()
 
   useEffect(() => {
     const fetchSessions = async () => {
       try {
         const token = localStorage.getItem("auth_token")
         if (!token) {
-          toast({
-            title: "Error",
-            description: "Please log in to continue.",
-            variant: "destructive",
+          toast.error("Please log in to continue.", {
+            position: "top-right",
+            duration: 5000
           })
           return
         }
@@ -63,10 +62,9 @@ export default function ChatPage() {
         setSessions(transformedSessions)
       } catch (error) {
         console.error("Error loading sessions:", error)
-        toast({
-          title: "Error",
-          description: error instanceof Error ? error.message : "Failed to load chat sessions",
-          variant: "destructive",
+        toast.error(error instanceof Error ? error.message : "Failed to load chat sessions", {
+          position: "top-right",
+          duration: 5000
         })
       } finally {
         setIsLoading(false)
@@ -74,7 +72,7 @@ export default function ChatPage() {
     }
 
     fetchSessions()
-  }, [toast])
+  }, [])
 
   return (
     <DashboardShell>

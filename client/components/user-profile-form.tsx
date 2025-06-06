@@ -14,8 +14,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { Textarea } from "@/components/ui/textarea"
-import { useBubble } from "@/hooks/use-bubble"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { toast } from "sonner"
 import apiConfig from "@/config/api"
 
 // Debounce function to prevent excessive state updates
@@ -45,7 +45,6 @@ export function UserProfileForm() {
     company: "",
     bio: ""
   })
-  const { toast } = useBubble()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [initialLoad, setInitialLoad] = useState(true)
 
@@ -68,12 +67,10 @@ export function UserProfileForm() {
       setIsLoading(true)
       const token = localStorage.getItem("auth_token")
       if (!token) {
-        toast({
-          title: "Authentication Error",
-          description: "Please log in to continue.",
-          variant: "destructive",
-          duration: 5000
-        })
+        toast.error("Please log in to continue.", {
+          position: "top-right",
+          duration: 5000,
+        });
         return
       }
       try {
@@ -89,11 +86,11 @@ export function UserProfileForm() {
         }
         
         if (isMounted) {
-        // Assuming the API returns { name, email, company, bio, image }
-        // Split the full name into first and last names.
-        const fullName = data.name || ""
-        const [fName = "", ...rest] = fullName.split(" ")
-        const lName = rest.join(" ")
+          // Assuming the API returns { name, email, company, bio, image }
+          // Split the full name into first and last names.
+          const fullName = data.name || ""
+          const [fName = "", ...rest] = fullName.split(" ")
+          const lName = rest.join(" ")
           
           setFormData({
             firstName: fName,
@@ -103,21 +100,19 @@ export function UserProfileForm() {
             bio: data.bio || ""
           })
           
-        setImage(data.image || null)
+          setImage(data.image || null)
           setInitialLoad(false) // Mark initial load as complete
         }
       } catch (error: any) {
         if (isMounted) {
-        toast({
-            title: "Error Loading Profile",
-            description: error.message || "Failed to load profile data. Please try again.",
-            variant: "destructive",
-            duration: 5000
-          })
+          toast.error(error.message || "Failed to load profile data. Please try again.", {
+            position: "top-right",
+            duration: 5000,
+          });
         }
       } finally {
         if (isMounted) {
-        setIsLoading(false)
+          setIsLoading(false)
         }
       }
     }
@@ -127,7 +122,7 @@ export function UserProfileForm() {
     return () => {
       isMounted = false; // Cleanup to prevent state updates after unmount
     }
-  }, [toast, initialLoad]) // Only depend on toast and initialLoad
+  }, [initialLoad])
 
   // Handle image upload change
   const handleImageChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -166,11 +161,10 @@ export function UserProfileForm() {
     try {
       const token = localStorage.getItem("auth_token")
       if (!token) {
-        toast({
-          title: "Error",
-          description: "Please log in to continue.",
-          variant: "destructive",
-        })
+        toast.error("Please log in to continue.", {
+          position: "top-right",
+          duration: 5000,
+        });
         return
       }
       const response = await fetch(apiConfig.getApiUrl('/api/profile'), {
@@ -186,24 +180,19 @@ export function UserProfileForm() {
         throw new Error(data.error || 'Failed to update profile')
       }
       
-      // Update toast with proper styling and ensure content is visible
-      toast({
-        title: "Success",
-        description: "Your profile has been updated successfully.",
-        variant: "success",
-        duration: 3000
-      })
+      toast.success("Your profile has been updated successfully.", {
+        position: "top-right",
+        duration: 3000,
+      });
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "An error occurred while updating your profile.",
-        variant: "destructive",
-        duration: 5000
-      })
+      toast.error(error.message || "An error occurred while updating your profile.", {
+        position: "top-right",
+        duration: 5000,
+      });
     } finally {
       setIsLoading(false)
     }
-  }, [formData, image, toast])
+  }, [formData, image])
 
   return (
     <div className="space-y-6">

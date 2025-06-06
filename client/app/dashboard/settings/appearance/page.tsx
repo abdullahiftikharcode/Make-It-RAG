@@ -9,7 +9,8 @@ import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Separator } from "@/components/ui/separator"
 import { Sun, Moon, Monitor } from "lucide-react"
-import { useToast } from "@/components/ui/use-toast"
+import { useTheme } from "next-themes"
+import { toast } from "sonner"
 import apiConfig from "@/config/api"
 
 interface UserSettings {
@@ -22,7 +23,7 @@ interface UserSettings {
 export default function AppearanceSettingsPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [settings, setSettings] = useState<UserSettings | null>(null)
-  const { toast } = useToast()
+  const { theme } = useTheme()
 
   useEffect(() => {
     loadSettings()
@@ -48,10 +49,9 @@ export default function AppearanceSettingsPage() {
     try {
       const token = localStorage.getItem("auth_token")
       if (!token) {
-        toast({
-          title: "Error",
-          description: "Please log in to continue.",
-          variant: "destructive",
+        toast.error("Please log in to continue.", {
+          position: "top-right",
+          duration: 5000
         })
         return
       }
@@ -77,10 +77,9 @@ export default function AppearanceSettingsPage() {
       setSettings(settingsWithTheme)
     } catch (error) {
       console.error('Error loading settings:', error)
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to load settings",
-        variant: "destructive",
+      toast.error(error instanceof Error ? error.message : "Failed to load settings", {
+        position: "top-right",
+        duration: 5000
       })
     }
   }
@@ -90,10 +89,9 @@ export default function AppearanceSettingsPage() {
     try {
       const token = localStorage.getItem("auth_token")
       if (!token) {
-        toast({
-          title: "Error",
-          description: "Please log in to continue.",
-          variant: "destructive",
+        toast.error("Please log in to continue.", {
+          position: "top-right",
+          duration: 5000
         })
         return
       }
@@ -116,16 +114,15 @@ export default function AppearanceSettingsPage() {
       }
 
       setSettings(prev => ({ ...prev!, ...newSettings }))
-      toast({
-        title: "Success",
-        description: "Settings saved successfully.",
+      toast.success("Settings saved successfully.", {
+        position: "top-right",
+        duration: 3000
       })
     } catch (error) {
       console.error('Error saving settings:', error)
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to save settings",
-        variant: "destructive",
+      toast.error(error instanceof Error ? error.message : "Failed to save settings", {
+        position: "top-right",
+        duration: 5000
       })
     } finally {
       setIsLoading(false)

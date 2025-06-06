@@ -7,10 +7,10 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Database, Edit, Plus, Trash2 } from "lucide-react"
 import Link from "next/link"
-import { useToast } from "@/components/ui/use-toast"
 import { useRouter } from "next/navigation"
 import apiConfig from "@/config/api"
 import { EmptyConnections } from "@/components/empty-connections"
+import { toast } from "sonner"
 
 interface Connection {
   id: string
@@ -28,7 +28,6 @@ interface Connection {
 
 export default function ConnectionsPage() {
   const [connections, setConnections] = useState<Connection[]>([])
-  const { toast } = useToast()
   const router = useRouter()
 
   // Function to fetch connections from the server
@@ -36,10 +35,9 @@ export default function ConnectionsPage() {
     const fetchConnections = async () => {
       const token = localStorage.getItem("auth_token")
       if (!token) {
-        toast({
-          title: "Error",
-          description: "Please log in to continue.",
-          variant: "destructive",
+        toast.error("Please log in to continue.", {
+          position: "top-right",
+          duration: 5000
         })
         return
       }
@@ -56,25 +54,23 @@ export default function ConnectionsPage() {
         const data = await response.json()
         setConnections(data)
       } catch (error: any) {
-        toast({
-          title: "Error",
-          description: error.message || "Failed to fetch connections",
-          variant: "destructive",
+        toast.error(error.message || "Failed to fetch connections", {
+          position: "top-right",
+          duration: 5000
         })
       }
     }
 
     fetchConnections()
-  }, [toast])
+  }, [])
 
   // Handler to delete a connection
   const handleDelete = async (connectionId: string) => {
     const token = localStorage.getItem("auth_token")
     if (!token) {
-      toast({
-        title: "Error",
-        description: "Please log in to continue.",
-        variant: "destructive",
+      toast.error("Please log in to continue.", {
+        position: "top-right",
+        duration: 5000
       })
       return
     }
@@ -91,15 +87,11 @@ export default function ConnectionsPage() {
       }
       // Remove deleted connection from the state
       setConnections((prev) => prev.filter((conn) => conn.id !== connectionId))
-      toast({
-        title: "Success",
-        description: data.message || "Connection deleted successfully",
-      })
+      toast.success(data.message || "Connection deleted successfully")
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to delete connection",
-        variant: "destructive",
+      toast.error(error.message || "Failed to delete connection", {
+        position: "top-right",
+        duration: 5000
       })
     }
   }
@@ -109,10 +101,9 @@ export default function ConnectionsPage() {
     try {
       const token = localStorage.getItem("auth_token")
       if (!token) {
-        toast({
-          title: "Error",
-          description: "Please log in to continue.",
-          variant: "destructive",
+        toast.error("Please log in to continue.", {
+          position: "top-right",
+          duration: 5000
         })
         return
       }
@@ -136,10 +127,9 @@ export default function ConnectionsPage() {
       // Navigate to the chat page using the newly created session ID.
       router.push(`/dashboard/chat/${connectionId}`)
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to start chat session",
-        variant: "destructive",
+      toast.error(error.message || "Failed to start chat session", {
+        position: "top-right",
+        duration: 5000
       })
     }
   }
