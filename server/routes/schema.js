@@ -13,11 +13,11 @@ const router = express.Router();
  */
 router.get('/:connectionId', verifyToken, catchAsync(async (req, res) => {
   try {
-    const schema = await ConnectionService.getConnectionSchema(req.params.connectionId, req.user.userId);
-    if (!schema) {
+    const data = await ConnectionService.getConnectionSchema(req.params.connectionId, req.user.userId);
+    if (!data || !data.schema) {
       throw new AppError('Schema not found', 404);
     }
-    res.json({ schema: schema });
+    res.json(data);
   } catch (error) {
     if (error instanceof AppError) {
       res.status(error.statusCode).json({ error: error.message });

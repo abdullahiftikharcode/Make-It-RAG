@@ -99,27 +99,29 @@ def get_db_schema(db_url: str) -> dict:
             tables = inspector.get_table_names()
             
             for table in tables:
-                columns = []
+                # Get column names
+                column_names = []
                 for column in inspector.get_columns(table):
-                    columns.append({
-                        "name": column["name"],
-                        "type": str(column["type"]),
-                        "nullable": column["nullable"]
-                    })
+                    column_names.append(column["name"])
                 
+                # Initialize table schema
                 schema[table] = {
-                    "columns": columns
+                    "columns": column_names
                 }
                 
                 # Get primary key constraints
                 pk = inspector.get_pk_constraint(table)
                 if pk and "constrained_columns" in pk:
-                    schema[table]["primary_keys"] = pk["constrained_columns"]
+                    schema[table]["primary_key"] = pk["constrained_columns"]
                 
                 # Get foreign key constraints
                 fks = inspector.get_foreign_keys(table)
                 if fks:
-                    schema[table]["foreign_keys"] = fks
+                    foreign_keys = {}
+                    for fk in fks:
+                        for local_col, ref_col in zip(fk["constrained_columns"], fk["referred_columns"]):
+                            foreign_keys[local_col] = f"{fk['referred_table']}.{ref_col}"
+                    schema[table]["foreign_keys"] = foreign_keys
         
         return schema
         
