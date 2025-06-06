@@ -12,19 +12,28 @@ import apiConfig from "@/config/api"
 
 // Database type icons mapping
 const databaseIcons = {
-  postgresql: {
-    src: "/icons/postgresql.svg",
-    alt: "PostgreSQL"
-  },
   mysql: {
     src: "/icons/mysql.svg",
     alt: "MySQL"
+  },
+  postgresql: {
+    src: "/icons/postgresql.svg",
+    alt: "PostgreSQL"
   },
   sqlserver: {
     src: "/icons/sqlserver.svg",
     alt: "SQL Server"
   }
 } as const;
+
+type DatabaseType = keyof typeof databaseIcons;
+
+interface RecentConnection {
+  id: string;
+  name: string;
+  type: DatabaseType;
+  isActive: boolean;
+}
 
 export default function DashboardPage() {
   const [stats, setStats] = useState({
@@ -36,7 +45,7 @@ export default function DashboardPage() {
     savedChatsThisWeek: 0,
   })
   const [isLoading, setIsLoading] = useState(false)
-  const [recentConnections, setRecentConnections] = useState<any[]>([])
+  const [recentConnections, setRecentConnections] = useState<RecentConnection[]>([])
   const [recentChats, setRecentChats] = useState<any[]>([])
   const [isLoadingConns, setIsLoadingConns] = useState(true)
   const [isLoadingChats, setIsLoadingChats] = useState(true)
@@ -92,9 +101,7 @@ export default function DashboardPage() {
         if (!response.ok) {
           throw new Error(data.error || "Failed to load recent connections")
         }
-        // Display only the three most recent connections
-        const threeConnections = data.connections.slice(0, 3)
-        setRecentConnections(threeConnections)
+        setRecentConnections(data.connections)
       } catch (error: any) {
         console.error("Error loading recent connections:", error.message)
       } finally {

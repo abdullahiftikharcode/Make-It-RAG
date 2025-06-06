@@ -74,14 +74,19 @@ class ConnectionModel {
   static async findRecentByUser(userId, limit = 3) {
     try {
       const [rows] = await promisePool.query(
-        `SELECT id, name, connection_string, type, created_at, last_used, is_active
+        `SELECT id, name, type, created_at, last_used, is_active
          FROM database_connections
          WHERE user_id = ?
          ORDER BY last_used DESC
          LIMIT ?`,
         [userId, limit]
       );
-      return rows;
+      return rows.map(row => ({
+        id: row.id,
+        name: row.name,
+        type: row.type,
+        isActive: row.is_active
+      }));
     } catch (error) {
       throw new AppError(`Error finding recent connections: ${error.message}`, 500);
     }
