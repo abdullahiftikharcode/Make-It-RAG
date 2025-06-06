@@ -105,7 +105,7 @@ export default function HistoryPage() {
                     </CardDescription>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <Link href={`/dashboard/chat/${session.id}`}>
+                    <Link href={`/dashboard/chat/sess-${session.id}`}>
                       <Button variant="secondary" size="sm">
                         <MessageSquare className="mr-2 h-4 w-4" />
                         View Chat
