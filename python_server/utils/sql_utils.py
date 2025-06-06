@@ -1,5 +1,6 @@
 import re
 from sqlalchemy import create_engine, MetaData, text
+import urllib.parse
 
 def remove_markdown_code_fence(sql_query: str) -> str:
     """Remove markdown code fences from SQL query strings."""
@@ -18,6 +19,62 @@ def clean_sql_query(sql_query: str) -> str:
     cleaned = re.sub(r'\s+', ' ', cleaned).strip()
     return cleaned
 
+def format_mysql_connection_string(db_url: str) -> str:
+    """
+    Format a MySQL connection string to be compatible with SQLAlchemy.
+    Handles special cases like ngrok TCP URLs.
+    
+    Args:
+        db_url: Raw MySQL connection string
+        
+    Returns:
+        SQLAlchemy-compatible connection string
+    """
+    # If already in SQLAlchemy format and properly encoded, return as is
+    if db_url.startswith('mysql+pymysql://'):
+        return db_url
+        
+    # Parse the connection string
+    if '@' in db_url:
+        auth_part, rest = db_url.split('@', 1)
+        user_pass, _ = auth_part.split('://', 1)
+        
+        # Split into components
+        if ':' in user_pass:
+            user, password = user_pass.split(':', 1)
+        else:
+            user = user_pass
+            password = ''
+            
+        # Handle ngrok TCP URLs
+        if '.tcp.' in rest:
+            host_port, db = rest.split('/', 1)
+            # Convert ngrok TCP URL to regular hostname
+            host, port = host_port.split(':', 1)
+        else:
+            if '/' in rest:
+                host_port, db = rest.split('/', 1)
+                if ':' in host_port:
+                    host, port = host_port.split(':', 1)
+                else:
+                    host = host_port
+                    port = '3306'
+            else:
+                host = rest
+                port = '3306'
+                db = ''
+                
+        # URL encode components
+        user = urllib.parse.quote_plus(user)
+        password = urllib.parse.quote_plus(password)
+        host = urllib.parse.quote_plus(host)
+        db = urllib.parse.quote_plus(db)
+        
+        # Construct SQLAlchemy URL
+        return f'mysql+pymysql://{user}:{password}@{host}:{port}/{db}'
+    else:
+        raise ValueError("Invalid MySQL connection string format")
+
 def get_db_schema(db_url: str) -> dict:
     """
     Extract database schema information from a database connection.
@@ -28,6 +85,10 @@ def get_db_schema(db_url: str) -> dict:
     Returns:
         Dictionary containing table schema information
     """
+    # Format the connection string if needed
+    if 'mysql' in db_url.lower():
+        db_url = format_mysql_connection_string(db_url)
+        
     engine = create_engine(db_url)
     metadata = MetaData()
     metadata.reflect(bind=engine)
@@ -62,6 +123,10 @@ def execute_sql_query(db_url: str, sql_query: str):
         A tuple of (columns, data) where columns is a list of column names and
         data is a list of dictionaries containing the query results
     """
+    # Format the connection string if needed
+    if 'mysql' in db_url.lower():
+        db_url = format_mysql_connection_string(db_url)
+        
     sql_query = clean_sql_query(sql_query)
     engine = create_engine(db_url)
     

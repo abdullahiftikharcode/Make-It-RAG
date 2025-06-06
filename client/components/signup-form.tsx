@@ -39,11 +39,11 @@ export function SignupForm() {
 
       if (!response.ok) {
         toast.error(data.error === "Email already exists"
-          ? "An account with this email already exists. Please log in instead."
-          : data.error === "Invalid email format"
-          ? "Please enter a valid email address."
-          : data.error === "Password too short"
-          ? "Password must be at least 8 characters long."
+            ? "An account with this email already exists. Please log in instead."
+            : data.error === "Invalid email format"
+            ? "Please enter a valid email address."
+            : data.error === "Password too short"
+            ? "Password must be at least 8 characters long."
           : data.error || "Something went wrong. Please try again.", {
             position: "top-right",
             duration: 5000,
