@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: text-to-sql-server
+    env: docker
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: GEMINI_API_KEY
+        sync: false
+    healthCheckPath: /health
+    plan: starter
+    numInstances: 1 
