@@ -585,6 +585,8 @@ export function ChatInterface({ connectionId, sessionId }: ChatInterfaceProps) {
       // Clean the session ID by removing sess- prefix if it exists
       const cleanSessionId = currentSessionId.startsWith("sess-") ? currentSessionId.replace("sess-", "") : currentSessionId
 
+      let targetConnectionId = connectionId
+
       if (isValidSessionId) {
         const sessionResponse = await fetch(apiConfig.getApiUrl(`/api/chat-sessions/${cleanSessionId}`), {
           headers: {
@@ -592,155 +594,90 @@ export function ChatInterface({ connectionId, sessionId }: ChatInterfaceProps) {
           },
         })
        
-        const sessionData = await sessionResponse.json()
         if (!sessionResponse.ok) {
+          const sessionData = await sessionResponse.json()
           throw new Error(sessionData.error || "Failed to load session")
         }
-        // Use the connection ID from the session
-        const targetConnectionId = sessionData.connectionId
-        const controller = new AbortController()
-        const timeout = setTimeout(() => controller.abort(), 60000) // 60 second timeout
-        try {
-          const schemaResponse = await fetch(apiConfig.getApiUrl(`/api/schema/${targetConnectionId}`), {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-            signal: controller.signal
-          })
 
-          clearTimeout(timeout)
-          const schemaData = await schemaResponse.json()
-        
-          if (!schemaResponse.ok) {
-            if (schemaResponse.status === 404) {
-              throw new Error("Database connection not found. Please check if the connection exists and is accessible.")
-            }
-            throw new Error(schemaData.error || schemaData.details || "Failed to fetch schema")
+        const sessionData = await sessionResponse.json()
+        targetConnectionId = sessionData.connectionId
+      }
+
+      const controller = new AbortController()
+      const timeout = setTimeout(() => controller.abort(), 30000) // 30 second timeout
+      
+      try {
+        const response = await fetch(apiConfig.getApiUrl(`/api/schema/${targetConnectionId}`), {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          signal: controller.signal
+        })
+
+        clearTimeout(timeout)
+
+        if (!response.ok) {
+          const errorData = await response.json()
+          if (response.status === 404) {
+            throw new Error("Database connection not found. Please check if the connection exists and is accessible.")
           }
-
-          // Transform the schema data into the expected format
-          if (!schemaData.schema) {
-            throw new Error("Invalid schema format received from server")
-          }
-
-          const transformedSchema = Object.entries(schemaData.schema).map(([table_name, table_info]: [string, any]) => {
-            // Transform columns
-            const columns = table_info.columns.map((column_name: string) => {
-              const constraints = []
-              // Add PRIMARY KEY constraint if column is in primary_key array
-              if (table_info.primary_key.includes(column_name)) {
-                constraints.push("PRIMARY KEY")
-              }
-              // Add FOREIGN KEY constraint if column has a foreign key
-              if (table_info.foreign_keys[column_name]) {
-                constraints.push(`FOREIGN KEY (${table_info.foreign_keys[column_name]})`)
-              }
-              return {
-                column_name,
-                data_type: "VARCHAR", // Since the schema doesn't provide data types, we'll use a default
-                constraints
-              }
-            })
-
-            // Transform foreign keys into array of strings
-            const foreignKeys = Object.entries(table_info.foreign_keys).map(([key, value]) => `${key} -> ${value}`)
-
-            return {
-              table_name,
-              columns,
-              primary_key: table_info.primary_key,
-              foreign_keys: foreignKeys
-            }
-          })
-
-          setSchema(transformedSchema)
-          localStorage.setItem(`schema_${targetConnectionId}`, JSON.stringify(transformedSchema))
-        } catch (error) {
-          if (error instanceof Error) {
-            if (error.name === 'AbortError') {
-              throw new Error('Schema fetch timed out. The database might be slow to respond.')
-            }
-            throw error
-          }
-          throw new Error('An unknown error occurred')
-        } finally {
-          clearTimeout(timeout)
+          throw new Error(errorData.error || errorData.details || "Failed to fetch schema")
         }
-      } else {
-        // Use the provided connection ID directly
-        const controller = new AbortController()
-        const timeout = setTimeout(() => controller.abort(), 30000) // 30 second timeout
-        try {
-          const response = fetch(apiConfig.getApiUrl(`/api/schema/${connectionId}`), {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-            signal: controller.signal
-          })
 
-          clearTimeout(timeout)
-          const data = await response.json()
+        const data = await response.json()
 
-          if (!response.ok) {
-            if (response.status === 404) {
-              throw new Error("Database connection not found. Please check if the connection exists and is accessible.")
-            }
-            throw new Error(data.error || data.details || "Failed to fetch schema")
-          }
-
-          // Transform the schema data into the expected format
-          if (!data.schema) {
-            throw new Error("Invalid schema format received from server")
-          }
-
-          const transformedSchema = Object.entries(data.schema).map(([table_name, table_info]: [string, any]) => {
-            // Transform columns
-            const columns = table_info.columns.map((column_name: string) => {
-              const constraints = []
-              // Add PRIMARY KEY constraint if column is in primary_key array
-              if (table_info.primary_key.includes(column_name)) {
-                constraints.push("PRIMARY KEY")
-              }
-              // Add FOREIGN KEY constraint if column has a foreign key
-              if (table_info.foreign_keys[column_name]) {
-                constraints.push(`FOREIGN KEY (${table_info.foreign_keys[column_name]})`)
-              }
-              return {
-                column_name,
-                data_type: "VARCHAR", // Since the schema doesn't provide data types, we'll use a default
-                constraints
-              }
-            })
-
-            // Transform foreign keys into array of strings
-            const foreignKeys = Object.entries(table_info.foreign_keys).map(([key, value]) => `${key} -> ${value}`)
-
-            return {
-              table_name,
-              columns,
-              primary_key: table_info.primary_key,
-              foreign_keys: foreignKeys
-            }
-          })
-
-          setSchema(transformedSchema)
-          localStorage.setItem(`schema_${connectionId}`, JSON.stringify(transformedSchema))
-        } catch (error) {
-          if (error instanceof Error) {
-            if (error.name === 'AbortError') {
-              throw new Error('Schema fetch timed out. The database might be slow to respond.')
-            }
-            throw error
-          }
-          throw new Error('An unknown error occurred')
-        } finally {
-          clearTimeout(timeout)
+        // Transform the schema data into the expected format
+        if (!data.schema) {
+          throw new Error("Invalid schema format received from server")
         }
+
+        const transformedSchema = Object.entries(data.schema).map(([table_name, table_info]: [string, any]) => {
+          // Transform columns
+          const columns = table_info.columns.map((column_name: string) => {
+            const constraints = []
+            // Add PRIMARY KEY constraint if column is in primary_key array
+            if (table_info.primary_key?.includes(column_name)) {
+              constraints.push("PRIMARY KEY")
+            }
+            // Add FOREIGN KEY constraint if column has a foreign key
+            if (table_info.foreign_keys?.[column_name]) {
+              constraints.push(`FOREIGN KEY (${table_info.foreign_keys[column_name]})`)
+            }
+            return {
+              column_name,
+              data_type: "VARCHAR", // Since the schema doesn't provide data types, we'll use a default
+              constraints
+            }
+          })
+
+          // Transform foreign keys into array of strings
+          const foreignKeys = Object.entries(table_info.foreign_keys || {}).map(([key, value]) => `${key} -> ${value}`)
+
+          return {
+            table_name,
+            columns,
+            primary_key: table_info.primary_key || [],
+            foreign_keys: foreignKeys
+          }
+        })
+
+        setSchema(transformedSchema)
+        localStorage.setItem(`schema_${targetConnectionId}`, JSON.stringify(transformedSchema))
+      } catch (error) {
+        if (error instanceof Error) {
+          if (error.name === 'AbortError') {
+            throw new Error('Schema fetch timed out. The database might be slow to respond.')
+          }
+          throw error
+        }
+        throw new Error('An unknown error occurred')
+      } finally {
+        clearTimeout(timeout)
       }
     } catch (error) {
       console.error("Schema fetch error:", error)
       toast.error(error instanceof Error 
-          ? error.message 
+        ? error.message 
         : "Failed to fetch schema. Please try again or check your database connection.", {
         position: "top-right",
         duration: 5000
