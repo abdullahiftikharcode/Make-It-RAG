@@ -39,7 +39,7 @@ class ChatModel {
         `SELECT id, role, content, sql_query, created_at
          FROM chat_messages
          WHERE session_id = ?
-         ORDER BY created_at ASC, id ASC`,
+         ORDER BY created_at ASC`,
         [sessionId]
       );
       

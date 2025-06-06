@@ -212,16 +212,13 @@ export function ChatInterface({ connectionId, sessionId }: ChatInterfaceProps) {
       }
   
       // Transform raw messages into your Message interface format
-      const transformedMessages = data.messages
-        .map((msg: any) => ({
-          id: msg.id,
-          role: msg.role,
-          content: msg.content,
-          timestamp: new Date(msg.created_at),
-          sql: msg.sql_query || undefined,
-        }))
-        // Sort by ID to maintain the original order
-        .sort((a: Message, b: Message) => parseInt(a.id) - parseInt(b.id))
+      const transformedMessages = data.messages.map((msg: any) => ({
+        id: msg.id,
+        role: msg.role,
+        content: msg.content,
+        timestamp: new Date(msg.created_at),
+        sql: msg.sql_query || undefined,
+      }));
   
       setMessages(transformedMessages)
   
