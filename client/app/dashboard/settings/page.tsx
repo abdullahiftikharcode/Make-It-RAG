@@ -371,7 +371,7 @@ function ApiKeyManager() {
         return;
       }
 
-      const response = await fetch(apiConfig.getApiUrl('/api/api-keys'), {
+      const response = await fetch(apiConfig.getApiUrl('/api/apikeys'), {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -410,7 +410,7 @@ function ApiKeyManager() {
         return;
       }
 
-      const response = await fetch(apiConfig.getApiUrl('/api/api-keys'), {
+      const response = await fetch(apiConfig.getApiUrl('/api/apikeys'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -464,7 +464,7 @@ function ApiKeyManager() {
         return;
       }
 
-      const response = await fetch(apiConfig.getApiUrl(`/api/api-keys/${keyId}`), {
+      const response = await fetch(apiConfig.getApiUrl(`/api/apikeys/${keyId}`), {
         method: 'DELETE',
         headers: {
           Authorization: `Bearer ${token}`,

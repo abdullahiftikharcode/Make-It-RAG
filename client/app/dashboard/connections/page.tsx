@@ -157,74 +157,74 @@ export default function ConnectionsPage() {
       {connections.length === 0 ? (
         <EmptyConnections />
       ) : (
-        <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-          {connections.map((connection) => (
-            <Card key={connection.id}>
-              <CardHeader className="pb-3">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                  <CardTitle className="text-lg font-medium">{connection.name}</CardTitle>
-                  <div
-                    className={`rounded-full px-2 py-1 text-xs font-medium w-fit ${
-                      connection.isActive ? "bg-green-500/20 text-green-600" : "bg-red-500/20 text-red-600"
-                    }`}
-                  >
-                    {connection.isActive ? "Connected" : "Disconnected"}
-                  </div>
+      <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+        {connections.map((connection) => (
+          <Card key={connection.id}>
+            <CardHeader className="pb-3">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                <CardTitle className="text-lg font-medium">{connection.name}</CardTitle>
+                <div
+                  className={`rounded-full px-2 py-1 text-xs font-medium w-fit ${
+                    connection.isActive ? "bg-green-500/20 text-green-600" : "bg-red-500/20 text-red-600"
+                  }`}
+                >
+                  {connection.isActive ? "Connected" : "Disconnected"}
                 </div>
-                <CardDescription>
-                  {connection.dialect} • Last used {connection.lastUsed}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="pb-3">
-                <div className="flex items-center space-x-2">
-                  <Database className="h-5 w-5 text-muted-foreground" />
-                  <span className="text-xs sm:text-sm text-muted-foreground truncate">{connection.connectionString}</span>
+              </div>
+              <CardDescription>
+                {connection.dialect} • Last used {connection.lastUsed}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pb-3">
+              <div className="flex items-center space-x-2">
+                <Database className="h-5 w-5 text-muted-foreground" />
+                <span className="text-xs sm:text-sm text-muted-foreground truncate">{connection.connectionString}</span>
+              </div>
+              <div className="mt-3 grid grid-cols-2 gap-2 text-xs sm:text-sm">
+                <div>
+                  <span className="text-muted-foreground">Tables:</span>
+                  <span className="ml-1 font-medium">{connection.tables}</span>
                 </div>
-                <div className="mt-3 grid grid-cols-2 gap-2 text-xs sm:text-sm">
-                  <div>
-                    <span className="text-muted-foreground">Tables:</span>
-                    <span className="ml-1 font-medium">{connection.tables}</span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Size:</span>
-                    <span className="ml-1 font-medium">{connection.size}</span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Queries:</span>
-                    <span className="ml-1 font-medium">{connection.queries}</span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Version:</span>
-                    <span className="ml-1 font-medium">{connection.version}</span>
-                  </div>
+                <div>
+                  <span className="text-muted-foreground">Size:</span>
+                  <span className="ml-1 font-medium">{connection.size}</span>
                 </div>
-              </CardContent>
-              <CardFooter className="flex flex-col sm:flex-row justify-between gap-2 pt-3">
+                <div>
+                  <span className="text-muted-foreground">Queries:</span>
+                  <span className="ml-1 font-medium">{connection.queries}</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Version:</span>
+                  <span className="ml-1 font-medium">{connection.version}</span>
+                </div>
+              </div>
+            </CardContent>
+            <CardFooter className="flex flex-col sm:flex-row justify-between gap-2 pt-3">
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full sm:w-auto"
+                onClick={() => handleStartChat(connection.id)}
+              >
+                Chat
+              </Button>
+              <div className="flex space-x-2 w-full sm:w-auto justify-end">
+                <Button variant="outline" size="sm">
+                  <Edit className="h-4 w-4" />
+                </Button>
                 <Button
                   variant="outline"
                   size="sm"
-                  className="w-full sm:w-auto"
-                  onClick={() => handleStartChat(connection.id)}
+                  className="text-destructive"
+                  onClick={() => handleDelete(connection.id)}
                 >
-                  Chat
+                  <Trash2 className="h-4 w-4" />
                 </Button>
-                <div className="flex space-x-2 w-full sm:w-auto justify-end">
-                  <Button variant="outline" size="sm">
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="text-destructive"
-                    onClick={() => handleDelete(connection.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </CardFooter>
-            </Card>
-          ))}
-        </div>
+              </div>
+            </CardFooter>
+          </Card>
+        ))}
+      </div>
       )}
     </DashboardShell>
   )
