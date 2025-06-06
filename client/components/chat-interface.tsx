@@ -220,7 +220,8 @@ export function ChatInterface({ connectionId, sessionId }: ChatInterfaceProps) {
           timestamp: new Date(msg.created_at),
           sql: msg.sql_query || undefined,
         }))
-        .sort((a: Message, b: Message) => a.timestamp.getTime() - b.timestamp.getTime())
+        // Sort by ID to maintain the original order
+        .sort((a: Message, b: Message) => parseInt(a.id) - parseInt(b.id))
   
       setMessages(transformedMessages)
   
