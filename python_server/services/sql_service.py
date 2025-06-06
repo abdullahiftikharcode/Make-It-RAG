@@ -1,4 +1,9 @@
-from python_server.utils.sql_utils import get_db_schema, execute_sql_query
+from python_server.utils.sql_utils import (
+    get_db_schema,
+    format_connection_string,
+    execute_sql_query,
+    clean_sql_query
+)
 from python_server.components.model_factory import ModelFactory
 from typing import Optional, Dict, Any
 import logging
@@ -160,25 +165,15 @@ class SQLService:
             
         return "true" in answer
         
-    def get_database_schema(self, db_url: str):
-        """
-        Get database schema from a connection string.
-        
-        Args:
-            db_url: Database connection string
-            
-        Returns:
-            Dictionary of database schema
-        """
+    def get_database_schema(self, db_url: str) -> dict:
+        """Get the schema of a database."""
         try:
-            logger.info(f"Attempting to get schema for database")
+            logger.info("Attempting to get schema for database")
             schema = get_db_schema(db_url)
-            logger.info(f"Successfully retrieved schema with {len(schema)} tables")
             return schema
         except Exception as e:
             logger.error(f"Error getting database schema: {str(e)}")
-            import traceback
-            logger.error(f"Full traceback:\n{traceback.format_exc()}")
+            logger.error("Full traceback:", exc_info=True)
             raise
         
     def execute_query(self, db_url: str, sql_query: str):
