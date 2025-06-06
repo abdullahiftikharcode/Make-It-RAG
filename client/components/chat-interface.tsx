@@ -707,7 +707,7 @@ export function ChatInterface({ connectionId, sessionId }: ChatInterfaceProps) {
         return;
       }
 
-      // Get the first user message as the title
+      // Get the first user message as the itle
       const firstUserMessage = messages.find(m => m.role === "user")?.content || "New Chat";
       const title = firstUserMessage.length > 50 
         ? firstUserMessage.substring(0, 47) + "..." 
