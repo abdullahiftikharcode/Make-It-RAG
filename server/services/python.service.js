@@ -21,7 +21,8 @@ class PythonService {
         dialect: dialect.toUpperCase(),
         settings: {
           query_timeout: settings?.query_timeout || 45
-        }
+        },
+        subscription_tier: settings?.subscription_tier || "personal"
       };
       
       // Add model selection if provided

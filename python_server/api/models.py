@@ -13,6 +13,7 @@ class QueryRequest(BaseModel):
     dialect: str = "MYSQL"
     settings: Optional[QuerySettings] = None
     selected_model_id: Optional[str] = None
+    subscription_tier: str = "personal"  # Default to personal tier
 
 class QueryResponse(BaseModel):
     """Query response model."""

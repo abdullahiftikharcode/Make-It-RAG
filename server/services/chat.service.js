@@ -39,7 +39,10 @@ class ChatService {
         query,
         connection.connection_string,
         connection.type,
-        settings
+        {
+          ...settings,
+          subscription_tier: settings?.subscription_tier || "personal"
+        }
       );
       
       let currentSessionId = sessionId;

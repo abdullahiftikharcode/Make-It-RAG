@@ -16,15 +16,24 @@ router.post('/', verifyToken, validateRequest({
   connectionId: { required: true },
   query: { required: true }
 }), catchAsync(async (req, res) => {
-  // Get user settings
-  const settings = await UserService.getSettings(req.user.userId);
+  // Get user settings and profile
+  const [settings, profile] = await Promise.all([
+    UserService.getSettings(req.user.userId),
+    UserService.getProfile(req.user.userId)
+  ]);
+  
+  // Combine settings with subscription tier
+  const combinedSettings = {
+    ...settings,
+    subscription_tier: profile.subscription_tier || "personal"
+  };
   
   // Process the query
   const result = await ChatService.processQuery(
     req.body.connectionId,
     req.body.query,
     req.body.sessionId,
-    settings,
+    combinedSettings,
     req.user.userId
   );
   
