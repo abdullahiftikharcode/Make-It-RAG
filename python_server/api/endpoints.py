@@ -3,6 +3,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import JSONResponse
 from typing import Optional
 import urllib.parse
+import logging
 
 from python_server.api.models import (
     QueryRequest, 
@@ -224,8 +225,18 @@ async def schema_endpoint(
     try:
         # URL decode the connection string if needed
         db_url = urllib.parse.unquote(db_url)
-        schema = sql_service.get_database_schema(db_url)
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Error retrieving schema: {str(e)}")
+        logger.info(f"Processing schema request for URL: {db_url}")
         
-    return {"schema": schema} 
+        schema = sql_service.get_database_schema(db_url)
+        logger.info("Successfully retrieved schema")
+        return {"schema": schema}
+    except ValueError as e:
+        logger.error(f"Value error: {str(e)}")
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Error retrieving schema: {str(e)}")
+        # Get the full error details
+        import traceback
+        error_details = traceback.format_exc()
+        logger.error(f"Full error traceback:\n{error_details}")
+        raise HTTPException(status_code=400, detail=f"Error retrieving schema: {str(e)}") 
