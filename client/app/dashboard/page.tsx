@@ -7,7 +7,24 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Database, MessageSquare, Plus, Activity } from "lucide-react"
 import Link from "next/link"
+import Image from "next/image"
 import apiConfig from "@/config/api"
+
+// Database type icons mapping
+const databaseIcons = {
+  postgresql: {
+    src: "/icons/postgresql.svg",
+    alt: "PostgreSQL"
+  },
+  mysql: {
+    src: "/icons/mysql.svg",
+    alt: "MySQL"
+  },
+  sqlserver: {
+    src: "/icons/sqlserver.svg",
+    alt: "SQL Server"
+  }
+} as const;
 
 export default function DashboardPage() {
   const [stats, setStats] = useState({
@@ -187,35 +204,16 @@ export default function DashboardPage() {
                 {recentConnections.map((connection) => (
                   <div key={connection.id} className="flex items-center justify-between">
                     <div className="flex items-center">
-                      <div className="mr-3">
-                        {connection.type === 'postgresql' && (
-                          <img 
-                            src="/icons/postgresql.svg" 
-                            alt="PostgreSQL" 
-                            className="h-6 w-6"
-                            width={24}
-                            height={24} 
-                          />
-                        )}
-                        {connection.type === 'mysql' && (
-                          <img 
-                            src="/icons/mysql.svg" 
-                            alt="MySQL" 
-                            className="h-6 w-6"
+                      <div className="mr-3 flex items-center justify-center w-6 h-6">
+                        {connection.type in databaseIcons ? (
+                          <Image
+                            src={databaseIcons[connection.type as keyof typeof databaseIcons].src}
+                            alt={databaseIcons[connection.type as keyof typeof databaseIcons].alt}
                             width={24}
                             height={24}
+                            priority
                           />
-                        )}
-                        {connection.type === 'sqlserver' && (
-                          <img 
-                            src="/icons/sqlserver.svg" 
-                            alt="SQL Server" 
-                            className="h-6 w-6"
-                            width={24}
-                            height={24}
-                          />
-                        )}
-                        {!['postgresql', 'mysql', 'sqlserver'].includes(connection.type) && (
+                        ) : (
                           <Database className="h-6 w-6 text-muted-foreground" />
                         )}
                       </div>
