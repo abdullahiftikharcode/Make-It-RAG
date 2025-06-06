@@ -12,7 +12,7 @@ const protectedRoutes = [
 
 // Get backend URL from environment variable
 const getBackendUrl = () => {
-  return process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001'
+  return process.env.NEXT_PUBLIC_BACKEND_URL || 'https://make-it-rag-1.onrender.com'
 }
 
 export async function middleware(request: NextRequest) {

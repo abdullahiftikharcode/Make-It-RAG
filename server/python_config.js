@@ -4,7 +4,7 @@
  */
 
 // Override the default Python service URL to match the port your Python server is running on
-process.env.PYTHON_SERVICE_URL = 'http://localhost:8001';
+process.env.PYTHON_SERVICE_URL = 'https://make-it-rag-1.onrender.com';
 
 // Log the configuration to confirm it's loaded
 console.log('Python service URL configured:', process.env.PYTHON_SERVICE_URL); 

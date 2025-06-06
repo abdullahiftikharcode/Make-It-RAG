@@ -47,6 +47,7 @@ const corsOptions = {
   origin: [
     'http://localhost:3000',
     'https://make-it-rag.vercel.app',
+    'https://make-it-rag-1.onrender.com',
     /\.vercel\.app$/  // Allow all subdomains of vercel.app
   ],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],

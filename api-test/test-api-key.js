@@ -11,7 +11,7 @@
 const fetch = require('node-fetch');
 
 // Constants
-const API_BASE_URL = 'http://localhost:3001/api';
+const API_BASE_URL = 'https://make-it-rag-1.onrender.com/api';
 const API_KEY = process.argv[2];
 
 // Check if API key was provided

@@ -13,7 +13,7 @@ const config = {
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '1h',
   
   // Python service configuration
-  pythonServiceUrl: process.env.PYTHON_SERVICE_URL || 'http://localhost:8000',
+  pythonServiceUrl: process.env.PYTHON_SERVICE_URL || 'https://make-it-rag-1.onrender.com',
   pythonServiceTimeout: process.env.PYTHON_SERVICE_TIMEOUT || 60000,
   
   // Database configuration (referenced from database.js)
