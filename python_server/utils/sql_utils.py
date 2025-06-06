@@ -2,7 +2,7 @@ import re
 import logging
 from sqlalchemy import create_engine, MetaData, text, exc, inspect
 import urllib.parse
-from urllib.parse import quote_plus, unquote
+from urllib.parse import quote_plus, unquote, urlparse
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -30,30 +30,37 @@ def format_connection_string(db_url: str) -> str:
     Format the database connection string to handle special characters and ngrok URLs.
     """
     try:
-        logger.info(f"Decoded URL: {db_url}")
+        logger.info(f"Received URL: {db_url}")
         
         # Handle ngrok URLs specifically
         if "ngrok.io" in db_url:
-            # Extract the port number from the ngrok URL
-            parts = db_url.split('@')
-            if len(parts) == 2:
-                credentials = parts[0]
-                host_part = parts[1]
+            # Parse the URL properly
+            parsed = urlparse(db_url)
+            
+            # Extract components
+            user = parsed.username
+            password = parsed.password
+            host = parsed.hostname
+            port = parsed.port
+            database = parsed.path.lstrip('/')
+            
+            # Ensure all components are properly quoted
+            if user:
+                user = quote_plus(user)
+            if password:
+                password = quote_plus(password)
+            if host:
+                host = host.lstrip('@')  # Remove any leading @ from hostname
+            
+            # Reconstruct the URL
+            if user and password:
+                auth = f"{user}:{password}@"
+            else:
+                auth = ""
                 
-                # Split host part to get port and database
-                host_parts = host_part.split('/')
-                if len(host_parts) >= 2:
-                    host_port = host_parts[0]
-                    database = host_parts[1]
-                    
-                    # Extract the actual host and port
-                    host = host_port.split(':')[0]
-                    port = host_port.split(':')[1]
-                    
-                    # Reconstruct the URL with proper host
-                    formatted_url = f"{credentials}@{host}:{port}/{database}"
-                    logger.info(f"Reformatted ngrok URL: {formatted_url}")
-                    return formatted_url
+            formatted_url = f"mysql+pymysql://{auth}{host}:{port}/{database}"
+            logger.info(f"Reformatted ngrok URL: {formatted_url}")
+            return formatted_url
         
         return db_url
         
