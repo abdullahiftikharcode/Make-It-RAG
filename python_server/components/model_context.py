@@ -14,17 +14,24 @@ class ModelContext:
         """
         self.api_key = api_key
         genai.configure(api_key=api_key)
-        self._current_model = "gemini-pro"
         self.registry = ModelRegistry(api_key)
+        # Initialize with the default model from registry
+        self._current_model = self.registry.get_current_model()
         
-    def select_model(self, model_id: str) -> None:
+    def select_model(self, model_id: str) -> bool:
         """
         Select a model by ID.
         
         Args:
             model_id: ID of the model to select
+            
+        Returns:
+            bool: True if model was successfully selected, False otherwise
         """
-        self._current_model = model_id
+        success = self.registry.select_model(model_id)
+        if success:
+            self._current_model = self.registry.get_current_model()
+        return success
         
     def get_current_model_info(self) -> Dict[str, Any]:
         """
@@ -33,9 +40,10 @@ class ModelContext:
         Returns:
             Dictionary with model information
         """
+        model = self._current_model
         return {
-            "name": self._current_model,
-            "description": "Gemini Pro model for natural language processing",
+            "name": model.get_model_name(),
+            "description": model.get_model_description(),
             "capabilities": ["text-generation", "code-generation"]
         }
         
@@ -49,8 +57,7 @@ class ModelContext:
         Returns:
             Generated content
         """
-        model = genai.GenerativeModel(self._current_model)
-        return model.generate_content(prompt)
+        return self._current_model.generate_content(prompt)
     
     def get_available_models(self) -> List[Dict[str, str]]:
         """
@@ -68,7 +75,7 @@ class ModelContext:
         Returns:
             The currently selected model
         """
-        return self.registry.get_current_model()
+        return self._current_model
     
     def format_model_options(self) -> str:
         """
