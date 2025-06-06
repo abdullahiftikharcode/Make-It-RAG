@@ -2,6 +2,7 @@ import os
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import JSONResponse
 from typing import Optional
+import urllib.parse
 
 from python_server.api.models import (
     QueryRequest, 
@@ -221,6 +222,8 @@ async def schema_endpoint(
         raise HTTPException(status_code=400, detail="Please provide a database connection string.")
         
     try:
+        # URL decode the connection string if needed
+        db_url = urllib.parse.unquote(db_url)
         schema = sql_service.get_database_schema(db_url)
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Error retrieving schema: {str(e)}")

@@ -30,6 +30,9 @@ def format_mysql_connection_string(db_url: str) -> str:
     Returns:
         SQLAlchemy-compatible connection string
     """
+    # First decode the URL if it's already encoded
+    db_url = urllib.parse.unquote(db_url)
+    
     # If already in SQLAlchemy format and properly encoded, return as is
     if db_url.startswith('mysql+pymysql://'):
         return db_url
