@@ -1,6 +1,11 @@
 from python_server.utils.sql_utils import get_db_schema, execute_sql_query
 from python_server.components.model_factory import ModelFactory
 from typing import Optional, Dict, Any
+import logging
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 class SQLService:
     """Service for SQL generation and execution."""
@@ -165,7 +170,16 @@ class SQLService:
         Returns:
             Dictionary of database schema
         """
-        return get_db_schema(db_url)
+        try:
+            logger.info(f"Attempting to get schema for database")
+            schema = get_db_schema(db_url)
+            logger.info(f"Successfully retrieved schema with {len(schema)} tables")
+            return schema
+        except Exception as e:
+            logger.error(f"Error getting database schema: {str(e)}")
+            import traceback
+            logger.error(f"Full traceback:\n{traceback.format_exc()}")
+            raise
         
     def execute_query(self, db_url: str, sql_query: str):
         """
@@ -178,4 +192,13 @@ class SQLService:
         Returns:
             Tuple of (columns, data)
         """
-        return execute_sql_query(db_url, sql_query) 
+        try:
+            logger.info("Attempting to execute query")
+            result = execute_sql_query(db_url, sql_query)
+            logger.info("Query executed successfully")
+            return result
+        except Exception as e:
+            logger.error(f"Error executing query: {str(e)}")
+            import traceback
+            logger.error(f"Full traceback:\n{traceback.format_exc()}")
+            raise 

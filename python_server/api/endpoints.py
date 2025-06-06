@@ -5,6 +5,10 @@ from typing import Optional
 import urllib.parse
 import logging
 
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 from python_server.api.models import (
     QueryRequest, 
     QueryResponse, 
@@ -17,6 +21,12 @@ from python_server.services.sql_service import SQLService
 from python_server.services.nlp_service import NLPService
 from python_server.components.model_context import ModelContext
 from python_server.config.config import GEMINI_API_KEY
+from python_server.dependencies import (
+    get_sql_service,
+    get_nlp_service,
+    get_subscription_tier,
+    get_model_context
+)
 
 router = APIRouter()
 
