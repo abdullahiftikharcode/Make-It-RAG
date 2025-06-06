@@ -250,4 +250,4 @@ async def schema_endpoint(
         import traceback
         error_details = traceback.format_exc()
         logger.error(f"Full error traceback:\n{error_details}")
-        raise HTTPException(status_code=400, detail=f"Error retrieving schema: {str(e)}") 
+        raise HTTPException(status_code=400, detail=f"Error retrieving schema: {str(e)}")

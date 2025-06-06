@@ -737,7 +737,7 @@ export function ChatInterface({ connectionId, sessionId }: ChatInterfaceProps) {
     } catch (error) {
       console.error("Schema fetch error:", error)
       toast.error(error instanceof Error 
-        ? error.message 
+          ? error.message 
         : "Failed to fetch schema. Please try again or check your database connection.", {
         position: "top-right",
         duration: 5000

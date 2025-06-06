@@ -60,7 +60,7 @@ export default function HistoryPage() {
     session.title.toLowerCase().includes(search.toLowerCase())
   )
 
-  return (
+    return (
     <DashboardShell>
       <DashboardHeader
         heading="Chat History"
@@ -115,53 +115,53 @@ export default function HistoryPage() {
                       variant="destructive"
                       size="sm"
                       onClick={async () => {
-                        try {
-                          const token = localStorage.getItem("auth_token")
-                          if (!token) {
-                            toast({
-                              title: "Error",
-                              description: "Please log in to continue.",
-                              variant: "destructive",
-                            })
-                            return
-                          }
+    try {
+      const token = localStorage.getItem("auth_token")
+      if (!token) {
+        toast({
+          title: "Error",
+          description: "Please log in to continue.",
+          variant: "destructive",
+        })
+        return
+      }
                           const response = await fetch(
                             apiConfig.getApiUrl(`/api/chats/${session.id}`),
                             {
-                              method: "DELETE",
-                              headers: {
-                                Authorization: `Bearer ${token}`,
-                              },
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
                             }
                           )
-                          if (!response.ok) {
+      if (!response.ok) {
                             throw new Error("Failed to delete chat session")
-                          }
+      }
                           setSessions((prev) =>
                             prev.filter((s) => s.id !== session.id)
                           )
-                          toast({
+      toast({
                             title: "Success",
-                            description: "Chat session deleted successfully.",
-                          })
-                        } catch (error: any) {
-                          toast({
-                            title: "Error",
+        description: "Chat session deleted successfully.",
+      })
+    } catch (error: any) {
+      toast({
+        title: "Error",
                             description:
                               error.message || "Failed to delete chat session",
-                            variant: "destructive",
-                          })
-                        }
+        variant: "destructive",
+      })
+    }
                       }}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </CardHeader>
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </CardHeader>
               </Card>
             ))
           )}
-        </div>
+                </div>
       </div>
     </DashboardShell>
   )
