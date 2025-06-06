@@ -169,7 +169,7 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </div>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7 mt-6">
         <Card className="col-span-4">
           <CardHeader>
             <CardTitle>Recent Connections</CardTitle>
@@ -188,13 +188,34 @@ export default function DashboardPage() {
                   <div key={connection.id} className="flex items-center justify-between">
                     <div className="flex items-center">
                       <div className="mr-3">
-                        {connection.type === 'postgresql' ? (
-                          <img src="/icons/postgresql.svg" alt="PostgreSQL" className="h-6 w-6" />
-                        ) : connection.type === 'mysql' ? (
-                          <img src="/icons/mysql.svg" alt="MySQL" className="h-6 w-6" />
-                        ) : connection.type === 'sqlserver' ? (
-                          <img src="/icons/sqlserver.svg" alt="SQL Server" className="h-6 w-6" />
-                        ) : (
+                        {connection.type === 'postgresql' && (
+                          <img 
+                            src="/icons/postgresql.svg" 
+                            alt="PostgreSQL" 
+                            className="h-6 w-6"
+                            width={24}
+                            height={24} 
+                          />
+                        )}
+                        {connection.type === 'mysql' && (
+                          <img 
+                            src="/icons/mysql.svg" 
+                            alt="MySQL" 
+                            className="h-6 w-6"
+                            width={24}
+                            height={24}
+                          />
+                        )}
+                        {connection.type === 'sqlserver' && (
+                          <img 
+                            src="/icons/sqlserver.svg" 
+                            alt="SQL Server" 
+                            className="h-6 w-6"
+                            width={24}
+                            height={24}
+                          />
+                        )}
+                        {!['postgresql', 'mysql', 'sqlserver'].includes(connection.type) && (
                           <Database className="h-6 w-6 text-muted-foreground" />
                         )}
                       </div>
