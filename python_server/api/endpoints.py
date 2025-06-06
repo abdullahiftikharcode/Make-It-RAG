@@ -15,7 +15,8 @@ from python_server.api.models import (
     ErrorResponse, 
     ModelSelectionRequest,
     ModelSelectionResponse,
-    ModelsListResponse
+    ModelsListResponse,
+    ModelInfo
 )
 from python_server.services.sql_service import SQLService
 from python_server.services.nlp_service import NLPService

@@ -1,38 +1,56 @@
+import google.generativeai as genai
 from typing import Any, Dict, List, Optional
 from python_server.components.model_registry import ModelRegistry, ModelStrategy
 
 class ModelContext:
-    """
-    Context class that maintains the currently selected model strategy
-    and delegates operations to it.
-    """
-    def __init__(self, api_key: str):
-        self.registry = ModelRegistry(api_key)
-        self.api_key = api_key
+    """Context manager for model selection and configuration."""
     
+    def __init__(self, api_key: str):
+        """
+        Initialize the model context.
+        
+        Args:
+            api_key: Gemini API key
+        """
+        self.api_key = api_key
+        genai.configure(api_key=api_key)
+        self._current_model = "gemini-pro"
+        self.registry = ModelRegistry(api_key)
+        
+    def select_model(self, model_id: str) -> None:
+        """
+        Select a model by ID.
+        
+        Args:
+            model_id: ID of the model to select
+        """
+        self._current_model = model_id
+        
+    def get_current_model_info(self) -> Dict[str, Any]:
+        """
+        Get information about the currently selected model.
+        
+        Returns:
+            Dictionary with model information
+        """
+        return {
+            "name": self._current_model,
+            "description": "Gemini Pro model for natural language processing",
+            "capabilities": ["text-generation", "code-generation"]
+        }
+        
     def generate_content(self, prompt: str) -> Any:
         """
-        Generate content using the currently selected model
+        Generate content using the selected model.
         
         Args:
-            prompt: The prompt to send to the model
+            prompt: Input prompt
             
         Returns:
-            The model's response
+            Generated content
         """
-        return self.registry.generate_content(prompt)
-    
-    def select_model(self, model_id: str) -> bool:
-        """
-        Select a model by its ID
-        
-        Args:
-            model_id: The ID of the model to select
-            
-        Returns:
-            True if the model was selected successfully, False otherwise
-        """
-        return self.registry.select_model(model_id)
+        model = genai.GenerativeModel(self._current_model)
+        return model.generate_content(prompt)
     
     def get_available_models(self) -> List[Dict[str, str]]:
         """
@@ -73,17 +91,4 @@ class ModelContext:
         return [
             f"{model['id']}. {model['name']} - {model['description']}"
             for model in models
-        ]
-    
-    def get_current_model_info(self) -> Dict[str, str]:
-        """
-        Get information about the currently selected model
-        
-        Returns:
-            Dictionary with current model info
-        """
-        current_model = self.get_current_model()
-        return {
-            "name": current_model.get_model_name(),
-            "description": current_model.get_model_description()
-        } 
+        ] 
