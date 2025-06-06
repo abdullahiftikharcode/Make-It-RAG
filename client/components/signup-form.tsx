@@ -19,56 +19,60 @@ export function SignupForm() {
     setIsLoading(true)
 
     // Prevent multiple submissions
-    if (isRedirecting.current) return
+    if (isRedirecting.current) return;
+
+    const formData = new FormData(event.currentTarget)
+    const email = formData.get("email") as string
+    const password = formData.get("password") as string
+    const name = formData.get("name") as string
 
     try {
-      const formData = new FormData(event.currentTarget)
-      const email = formData.get("email")
-      const password = formData.get("password")
-      const confirmPassword = formData.get("confirmPassword")
-
-      // Basic validation
-      if (password !== confirmPassword) {
-        toast.error("Passwords do not match", {
-          position: "top-right",
-          duration: 5000
-        });
-        return;
-      }
-
-      const response = await fetch(apiConfig.getApiUrl("/api/auth/signup"), {
+      const response = await fetch(apiConfig.getApiUrl("/signup"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          email,
-          password,
-        }),
+        body: JSON.stringify({ name, email, password }),
       })
 
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || "Signup failed")
+        toast.error(data.error === "Email already exists"
+          ? "An account with this email already exists. Please log in instead."
+          : data.error === "Invalid email format"
+          ? "Please enter a valid email address."
+          : data.error === "Password too short"
+          ? "Password must be at least 8 characters long."
+          : data.error || "Something went wrong. Please try again.", {
+            position: "top-right",
+            duration: 5000,
+          });
+      } else {
+        // Mark as redirecting to prevent multiple redirects
+        isRedirecting.current = true;
+        
+        // Store the token and user data in localStorage
+        localStorage.setItem('auth_token', data.token)
+        localStorage.setItem('user_data', JSON.stringify(data.user))
+        
+        toast.success("You've successfully signed up for SQL Chat Assistant.", {
+          position: "top-right",
+          duration: 3000,
+        });
+        
+        // Short timeout to ensure toast has time to appear
+        setTimeout(() => {
+          router.push("/dashboard");
+        }, 100);
       }
-
-      // Store token
-      localStorage.setItem("auth_token", data.token)
-      
-      // Set success flag and redirect
-      isRedirecting.current = true
-      toast.success("Account created successfully!", {
-        position: "top-right",
-        duration: 3000
-      });
-      router.push("/dashboard")
     } catch (error) {
-      setIsLoading(false)
-      toast.error(error instanceof Error ? error.message : "Signup failed", {
+      toast.error("Unable to connect to the server. Please check your internet connection and try again.", {
         position: "top-right",
-        duration: 5000
+        duration: 5000,
       });
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -76,7 +80,20 @@ export function SignupForm() {
     <div className="grid gap-6">
       <form onSubmit={onSubmit}>
         <div className="grid gap-4">
-          <div className="grid gap-1">
+          <div className="grid gap-2">
+            <Label htmlFor="name">Name</Label>
+            <Input
+              id="name"
+              name="name"
+              placeholder="John Doe"
+              autoCapitalize="none"
+              autoComplete="name"
+              autoCorrect="off"
+              disabled={isLoading}
+              required
+            />
+          </div>
+          <div className="grid gap-2">
             <Label htmlFor="email">Email</Label>
             <Input
               id="email"
@@ -87,33 +104,24 @@ export function SignupForm() {
               autoComplete="email"
               autoCorrect="off"
               disabled={isLoading}
+              required
             />
           </div>
-          <div className="grid gap-1">
+          <div className="grid gap-2">
             <Label htmlFor="password">Password</Label>
             <Input
               id="password"
               name="password"
               type="password"
+              autoCapitalize="none"
               autoComplete="new-password"
+              autoCorrect="off"
               disabled={isLoading}
+              required
             />
           </div>
-          <div className="grid gap-1">
-            <Label htmlFor="confirmPassword">Confirm Password</Label>
-            <Input
-              id="confirmPassword"
-              name="confirmPassword"
-              type="password"
-              autoComplete="new-password"
-              disabled={isLoading}
-            />
-          </div>
-          <Button type="submit" disabled={isLoading}>
-            {isLoading && (
-              <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-            )}
-            Sign Up
+          <Button disabled={isLoading || isRedirecting.current}>
+            {isLoading ? "Creating account..." : "Create account"}
           </Button>
         </div>
       </form>

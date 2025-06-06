@@ -22,35 +22,67 @@ export function LoginForm() {
 
   // Check for valid token when component mounts
   useEffect(() => {
-    const checkToken = async () => {
-      const token = localStorage.getItem("auth_token")
-      if (!token) return
+    // Skip if we've already checked the token or already redirecting
+    if (tokenChecked.current || isRedirecting.current) return;
+    
+    const checkStoredToken = async () => {
+      const storedToken = localStorage.getItem('auth_token') || Cookies.get('auth_token')
+      if (!storedToken) {
+        tokenChecked.current = true;
+        return;
+      }
 
       try {
-        const response = await fetch(apiConfig.getApiUrl("/api/auth/check"), {
+        const validateResponse = await fetch(apiConfig.getApiUrl("/validate-token"), {
+          method: "GET",
           headers: {
-            Authorization: `Bearer ${token}`,
+            "Authorization": `Bearer ${storedToken}`,
+            "Content-Type": "application/json",
           },
         })
 
-        if (response.ok) {
-          // Token is valid, redirect to dashboard
-          router.push(returnUrl)
+        if (validateResponse.ok) {
+          // Token is valid, redirect only if not already redirecting
+          if (!isRedirecting.current) {
+            isRedirecting.current = true;
+            
+            // Make sure the cookie is set correctly for middleware
+            if (!Cookies.get('auth_token')) {
+              Cookies.set('auth_token', storedToken, { 
+                expires: 1/24, // 1 hour
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'lax',
+                path: '/' // Ensure cookie is available for all paths
+              })
+            }
+            
+            toast.success("Welcome back to SQL Chat Assistant.", {
+              position: "top-right",
+              duration: 3000,
+            });
+            
+            // Short timeout to ensure toast has time to appear before redirect
+            setTimeout(() => {
+              router.push(returnUrl);
+            }, 100);
+          }
         } else {
-          // Token is invalid, remove it
-          localStorage.removeItem("auth_token")
+          // Token is invalid, clear it
+          localStorage.removeItem('auth_token')
+          localStorage.removeItem('user_data')
+          Cookies.remove('auth_token')
         }
       } catch (error) {
-        // Network error or other issues
-        console.error("Error checking token:", error)
-        localStorage.removeItem("auth_token")
+        // Network error or other issues, clear token
+        localStorage.removeItem('auth_token')
+        localStorage.removeItem('user_data')
+        Cookies.remove('auth_token')
+      } finally {
+        tokenChecked.current = true;
       }
-      tokenChecked.current = true
     }
 
-    if (!tokenChecked.current) {
-      checkToken()
-    }
+    checkStoredToken()
   }, [router, returnUrl])
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -58,79 +90,106 @@ export function LoginForm() {
     setIsLoading(true)
 
     // Prevent multiple submissions
-    if (isRedirecting.current) return
+    if (isRedirecting.current) return;
 
     try {
       const formData = new FormData(event.currentTarget)
-      const email = formData.get("email")
-      const password = formData.get("password")
+      const email = formData.get("email") as string
+      const password = formData.get("password") as string
 
-      const response = await fetch(apiConfig.getApiUrl("/api/auth/login"), {
+      const response = await fetch(apiConfig.getApiUrl("/login"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          email,
-          password,
-        }),
+        body: JSON.stringify({ email, password }),
       })
 
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || "Login failed")
+        toast.error(data.error === "Invalid credentials" 
+          ? "Invalid email or password. Please try again."
+          : data.error === "User not found"
+          ? "No account found with this email. Please sign up first."
+          : data.error || "Something went wrong. Please try again.", {
+            position: "top-right",
+            duration: 5000,
+          });
+      } else {
+        // Only set redirecting flag if login is successful
+        isRedirecting.current = true;
+        
+        // Store the token in both localStorage and cookie
+        localStorage.setItem('auth_token', data.token)
+        localStorage.setItem('user_data', JSON.stringify(data.user))
+        
+        // Set cookie with token (expires in 1 hour)
+        Cookies.set('auth_token', data.token, { 
+          expires: 1/24, // 1 hour
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax',
+          path: '/' // Ensure cookie is available for all paths
+        })
+        
+        toast.success("Welcome back to SQL Chat Assistant.", {
+          position: "top-right",
+          duration: 3000,
+        });
+        
+        // Short timeout to ensure toast has time to appear
+        setTimeout(() => {
+          router.push(returnUrl);
+        }, 100);
       }
-
-      // Store token and user data
-      localStorage.setItem("auth_token", data.token)
-      
-      // Set success flag and redirect
-      isRedirecting.current = true
-      toast.success("Login successful!", {
-        position: "top-right",
-        duration: 3000
-      });
-      router.push(returnUrl)
     } catch (error) {
-      setIsLoading(false)
-      toast.error(error instanceof Error ? error.message : "Login failed", {
+      console.error("Login error:", error)
+      toast.error("An error occurred during login. Please try again.", {
         position: "top-right",
-        duration: 5000
+        duration: 5000,
       });
+    } finally {
+      setIsLoading(false)
     }
   }
 
   return (
     <div className="grid gap-6">
       <form onSubmit={onSubmit}>
-        <div className="grid gap-4">
+        <div className="grid gap-2">
           <div className="grid gap-1">
-            <Label htmlFor="email">Email</Label>
+            <Label className="sr-only" htmlFor="email">
+              Email
+            </Label>
             <Input
               id="email"
-              name="email"
               placeholder="name@example.com"
               type="email"
               autoCapitalize="none"
               autoComplete="email"
               autoCorrect="off"
               disabled={isLoading}
+              name="email"
             />
           </div>
           <div className="grid gap-1">
-            <Label htmlFor="password">Password</Label>
+            <Label className="sr-only" htmlFor="password">
+              Password
+            </Label>
             <Input
               id="password"
-              name="password"
+              placeholder="Password"
               type="password"
+              autoCapitalize="none"
               autoComplete="current-password"
+              autoCorrect="off"
               disabled={isLoading}
+              name="password"
             />
           </div>
-          <Button type="submit" disabled={isLoading}>
+          <Button disabled={isLoading}>
             {isLoading && (
-              <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+              <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-primary border-r-transparent" />
             )}
             Sign In
           </Button>
