@@ -173,6 +173,66 @@ class ConnectionModel {
       // Non-critical error, don't throw
     }
   }
+
+  /**
+   * Find or create a connection
+   * @param {string} connectionString - Connection string
+   * @param {string} userId - User ID
+   * @returns {Promise<object>} Connection object
+   */
+  static async findOrCreate(connectionString, userId) {
+    const conn = await promisePool.getConnection();
+    try {
+      await conn.beginTransaction();
+      
+      // First try to find an existing connection
+      const [existing] = await conn.query(
+        `SELECT * FROM database_connections 
+         WHERE connection_string = ? AND user_id = ?`,
+        [connectionString, userId]
+      );
+      
+      if (existing.length > 0) {
+        // Update last_used and is_active if found
+        await conn.query(
+          `UPDATE database_connections 
+           SET last_used = NOW(), is_active = true 
+           WHERE id = ?`,
+          [existing[0].id]
+        );
+        
+        await conn.commit();
+        return existing[0];
+      }
+      
+      // If not found, create a new connection
+      const connectionId = uuidv4();
+      const name = `MySQL Connection ${new Date().toLocaleString()}`;
+      
+      await conn.query(
+        `INSERT INTO database_connections 
+         (id, user_id, name, type, connection_string, is_active)
+         VALUES (?, ?, ?, ?, ?, true)`,
+        [connectionId, userId, name, 'mysql', connectionString]
+      );
+      
+      await conn.commit();
+      
+      return {
+        id: connectionId,
+        user_id: userId,
+        name,
+        type: 'mysql',
+        connection_string: connectionString,
+        is_active: true
+      };
+    } catch (error) {
+      await conn.rollback();
+      throw new AppError(`Error finding/creating connection: ${error.message}`, 500);
+    } finally {
+      conn.release();
+    }
+  }
 }
 
 module.exports = ConnectionModel; 

@@ -109,12 +109,13 @@ class ChatModel {
       // First verify that the connection belongs to the user
       const [connections] = await promisePool.query(
         `SELECT id FROM database_connections 
-         WHERE id = ? AND user_id = ? AND is_active = true`,
+         WHERE id = ? AND user_id = ?`,
         [connectionId, userId]
       );
       
       if (connections.length === 0) {
-        throw new AppError('Connection not found or inactive', 404);
+        // Return empty sessions list for new connections
+        return { sessions: [] };
       }
       
       // Fetch all chat sessions for this connection

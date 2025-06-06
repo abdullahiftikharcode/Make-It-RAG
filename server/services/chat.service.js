@@ -44,40 +44,33 @@ class ChatService {
       
       let currentSessionId = sessionId;
       
-      // If no sessionId provided, create a new session
+      // If no session ID provided, create a new chat session
       if (!currentSessionId) {
-        const title = query.length > 50 ? query.substring(0, 47) + "..." : query;
-        
-        const result = await ChatModel.createSession(
-          {
-            connectionId,
-            title,
-            messages: [] // Empty initial messages, we'll add them below
-          },
-          userId
-        );
-        
-        currentSessionId = result.sessionId;
+        const sessionResult = await ChatModel.createSession({
+          connectionId: connection.id,
+          title: query.substring(0, 100) // Use first 100 chars of query as title
+        }, userId);
+        currentSessionId = sessionResult.sessionId;
       }
       
-      // Save the messages
-      await ChatModel.addMessage(
+      // Add the user's message
+      await ChatModel.addRawMessage(
         currentSessionId,
-        {
-          query,
-          explanation: pythonData.explanation,
-          sqlQuery: settings?.show_sql_queries ? pythonData.sql_query : null
-        }
+        'user',
+        query,
+        null
       );
       
-      // Update connection last used timestamp
-      await ConnectionModel.updateLastUsed(connectionId);
+      // Add the assistant's response
+      await ChatModel.addRawMessage(
+        currentSessionId,
+        'assistant',
+        pythonData.explanation,
+        pythonData.sql
+      );
       
       return {
-        explanation: pythonData.explanation,
-        sql_query: settings?.show_sql_queries ? pythonData.sql_query : null,
-        data: pythonData.data,
-        columns: pythonData.columns,
+        ...pythonData,
         sessionId: currentSessionId
       };
     } catch (error) {
@@ -190,6 +183,16 @@ class ChatService {
    */
   static async getSessionsByConnection(connectionId, userId) {
     try {
+      // First verify that the connection exists or create it
+      const connection = await ConnectionModel.findById(connectionId, userId);
+      
+      if (!connection) {
+        // Try to create a new connection with a dummy string first
+        const dummyString = `mysql+pymysql://user:pass@host:3306/db`;
+        const newConnection = await ConnectionModel.findOrCreate(dummyString, userId);
+        connectionId = newConnection.id;
+      }
+      
       return await ChatModel.findByConnection(connectionId, userId);
     } catch (error) {
       if (error instanceof AppError) {
