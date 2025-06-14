@@ -11,9 +11,42 @@ from python_server.config.config import (
 )
 from python_server.utils.sql_utils import remove_markdown_code_fence
 
-class QueryValidator(BaseComponent):    """    Component to validate if a natural language query is related to a database schema.    """    outgoing_edges = 1        def __init__(self, api_key: str, subscription_tier: str = "personal"):        self.api_key = api_key        self.subscription_tier = subscription_tier
+class QueryValidator(BaseComponent):
+    """Component to validate if a natural language query is related to a database schema."""
+    outgoing_edges = 1
+    
+    def __init__(self, api_key: str, subscription_tier: str = "personal"):
+        self.api_key = api_key
+        self.subscription_tier = subscription_tier
         
-        def run(self, query: str, table_structure: dict, model: Optional[str] = None, **kwargs):        """        Validate if the query is related to the table structure.                Args:            query: Natural language query            table_structure: Database schema as dictionary            model: Optional model name to use, defaults to config value                    Returns:            Dictionary with is_valid boolean flag        """        prompt = (            "Determine if the following natural language query is related to the provided table schema. "            "Return 'true' if it is, and 'false' if it is not.\n\n"            "Table Schema (JSON):\n"            f"{json.dumps(table_structure, indent=2)}\n\n"            "Query:\n"            f"{query}\n"        )                from python_server.components.model_factory import ModelFactory                # Use model factory to get appropriate model based on subscription tier        ai_model = ModelFactory.create_model(self.subscription_tier, self.api_key)        response = ai_model.generate_content(prompt)        answer = response.text.strip().lower()        is_valid = "true" in answer
+    def run(self, query: str, table_structure: dict, model: Optional[str] = None, **kwargs):
+        """
+        Validate if the query is related to the table structure.
+        
+        Args:
+            query: Natural language query
+            table_structure: Database schema as dictionary
+            model: Optional model name to use, defaults to config value
+            
+        Returns:
+            Dictionary with is_valid boolean flag
+        """
+        prompt = (
+            "Determine if the following natural language query is related to the provided table schema. "
+            "Return 'true' if it is, and 'false' if it is not.\n\n"
+            "Table Schema (JSON):\n"
+            f"{json.dumps(table_structure, indent=2)}\n\n"
+            "Query:\n"
+            f"{query}\n"
+        )
+        
+        from python_server.components.model_factory import ModelFactory
+        
+        # Use model factory to get appropriate model based on subscription tier
+        ai_model = ModelFactory.create_model(self.subscription_tier, self.api_key)
+        response = ai_model.generate_content(prompt)
+        answer = response.text.strip().lower()
+        is_valid = "true" in answer
         
         return {"is_valid": is_valid}, "output"
         
@@ -25,9 +58,43 @@ class QueryValidator(BaseComponent):    """    Component to validate if a natura
             results.append(result)
         return results, "output"
 
-class GeminiSQLGenerator(BaseComponent):    """    Component to generate SQL queries from natural language using Gemini.    """    outgoing_edges = 1        def __init__(self, api_key: str, subscription_tier: str = "personal"):        self.api_key = api_key        self.subscription_tier = subscription_tier
+class GeminiSQLGenerator(BaseComponent):
+    """Component to generate SQL queries from natural language using Gemini."""
+    outgoing_edges = 1
+    
+    def __init__(self, api_key: str, subscription_tier: str = "personal"):
+        self.api_key = api_key
+        self.subscription_tier = subscription_tier
         
-        def run(self, query: str, table_structure: dict, dialect: str = "generic SQL", model: Optional[str] = None, **kwargs):        """        Generate SQL query from natural language.                Args:            query: Natural language query            table_structure: Database schema as dictionary            dialect: SQL dialect to use            model: Optional model name to use, defaults to config value                    Returns:            Dictionary with generated SQL query        """        system_prompt = (            f"SQL Dialect: {dialect}\n\n"            "System Prompt: SQL Table Structure (in JSON):\n"            f"{json.dumps(table_structure, indent=2)}\n\n"            "User Query:\n"            f"{query}\n\n"            "Generate the corresponding SQL query:"        )                from python_server.components.model_factory import ModelFactory                # Use model factory to get appropriate model based on subscription tier        ai_model = ModelFactory.create_model(self.subscription_tier, self.api_key)        response = ai_model.generate_content(system_prompt)        sql_query = response.text.strip()        sql_query = remove_markdown_code_fence(sql_query)
+    def run(self, query: str, table_structure: dict, dialect: str = "generic SQL", model: Optional[str] = None, **kwargs):
+        """
+        Generate SQL query from natural language.
+        
+        Args:
+            query: Natural language query
+            table_structure: Database schema as dictionary
+            dialect: SQL dialect to use
+            model: Optional model name to use, defaults to config value
+            
+        Returns:
+            Dictionary with generated SQL query
+        """
+        system_prompt = (
+            f"SQL Dialect: {dialect}\n\n"
+            "System Prompt: SQL Table Structure (in JSON):\n"
+            f"{json.dumps(table_structure, indent=2)}\n\n"
+            "User Query:\n"
+            f"{query}\n\n"
+            "Generate the corresponding SQL query:"
+        )
+        
+        from python_server.components.model_factory import ModelFactory
+        
+        # Use model factory to get appropriate model based on subscription tier
+        ai_model = ModelFactory.create_model(self.subscription_tier, self.api_key)
+        response = ai_model.generate_content(system_prompt)
+        sql_query = response.text.strip()
+        sql_query = remove_markdown_code_fence(sql_query)
         
         return {"sql_query": sql_query}, "output"
         
@@ -39,7 +106,13 @@ class GeminiSQLGenerator(BaseComponent):    """    Component to generate SQL que
             results.append(result)
         return results, "output"
 
-class QueryVerifier(BaseComponent):    """    Component to verify generated SQL queries for correctness.    """    outgoing_edges = 1        def __init__(self, api_key: str, subscription_tier: str = "personal"):        self.api_key = api_key        self.subscription_tier = subscription_tier
+class QueryVerifier(BaseComponent):
+    """Component to verify generated SQL queries for correctness."""
+    outgoing_edges = 1
+    
+    def __init__(self, api_key: str, subscription_tier: str = "personal"):
+        self.api_key = api_key
+        self.subscription_tier = subscription_tier
         
     def run(self, sql_query: str, user_query: str, table_structure: dict, dialect: str = "generic SQL", model: Optional[str] = None, **kwargs):
         """
@@ -69,7 +142,12 @@ class QueryVerifier(BaseComponent):    """    Component to verify generated SQL 
                 f"{sql_query}\n"
             )
             
-                        from python_server.components.model_factory import ModelFactory                        # Use model factory to get appropriate model based on subscription tier            ai_model = ModelFactory.create_model(self.subscription_tier, self.api_key)            response = ai_model.generate_content(prompt)            answer = response.text.strip().lower()
+            from python_server.components.model_factory import ModelFactory
+            
+            # Use model factory to get appropriate model based on subscription tier
+            ai_model = ModelFactory.create_model(self.subscription_tier, self.api_key)
+            response = ai_model.generate_content(prompt)
+            answer = response.text.strip().lower()
             
             if "false" in answer:
                 return {"is_valid": False}, "output"
@@ -87,7 +165,15 @@ class QueryVerifier(BaseComponent):    """    Component to verify generated SQL 
             results.append(result)
         return results, "output"
 
-class AgenticSQLGenerator(BaseComponent):    """    Component that combines SQL generation and verification in an agentic approach.    """    outgoing_edges = 1        def __init__(self, api_key: str, subscription_tier: str = "personal"):        self.api_key = api_key        self.subscription_tier = subscription_tier        self.sql_generator = GeminiSQLGenerator(api_key, subscription_tier)        self.query_verifier = QueryVerifier(api_key, subscription_tier)
+class AgenticSQLGenerator(BaseComponent):
+    """Component that combines SQL generation and verification in an agentic approach."""
+    outgoing_edges = 1
+    
+    def __init__(self, api_key: str, subscription_tier: str = "personal"):
+        self.api_key = api_key
+        self.subscription_tier = subscription_tier
+        self.sql_generator = GeminiSQLGenerator(api_key, subscription_tier)
+        self.query_verifier = QueryVerifier(api_key, subscription_tier)
         
     def run(self, query: str, table_structure: dict, dialect: str = "generic SQL", model: Optional[str] = None, **kwargs):
         """
@@ -144,15 +230,22 @@ class AgenticSQLGenerator(BaseComponent):    """    Component that combines SQL 
             results.append(result)
         return results, "output"
 
-
-def build_pipeline(api_key: str, subscription_tier: str = "personal") -> Pipeline:   
-     """    Build a Haystack pipeline for SQL generation.     
-        Args:        api_key: Gemini API key       
-         subscription_tier: User's subscription tier           
-          Returns:        Configured Haystack pipeline    """   
-           pipeline = Pipeline()    
-           validator_node = QueryValidator(api_key=api_key, subscription_tier=subscription_tier)    
-           agentic_node = AgenticSQLGenerator(api_key=api_key, subscription_tier=subscription_tier)        
-           pipeline.add_node(component=validator_node, name="QueryValidator", inputs=["Query"])    
-           pipeline.add_node(component=agentic_node, name="AgenticSQLGenerator", inputs=["Query"])        
-           return pipeline 
+def build_pipeline(api_key: str, subscription_tier: str = "personal") -> Pipeline:
+    """
+    Build a Haystack pipeline for SQL generation.
+    
+    Args:
+        api_key: Gemini API key
+        subscription_tier: User's subscription tier
+        
+    Returns:
+        Configured Haystack pipeline
+    """
+    pipeline = Pipeline()
+    validator_node = QueryValidator(api_key=api_key, subscription_tier=subscription_tier)
+    agentic_node = AgenticSQLGenerator(api_key=api_key, subscription_tier=subscription_tier)
+    
+    pipeline.add_node(component=validator_node, name="QueryValidator", inputs=["Query"])
+    pipeline.add_node(component=agentic_node, name="AgenticSQLGenerator", inputs=["Query"])
+    
+    return pipeline 
