@@ -145,4 +145,14 @@ class AgenticSQLGenerator(BaseComponent):    """    Component that combines SQL 
         return results, "output"
 
 
-def build_pipeline(api_key: str, subscription_tier: str = "personal") -> Pipeline:    """    Build a Haystack pipeline for SQL generation.        Args:        api_key: Gemini API key        subscription_tier: User's subscription tier            Returns:        Configured Haystack pipeline    """    pipeline = Pipeline()    validator_node = QueryValidator(api_key=api_key, subscription_tier=subscription_tier)    agentic_node = AgenticSQLGenerator(api_key=api_key, subscription_tier=subscription_tier)        pipeline.add_node(component=validator_node, name="QueryValidator", inputs=["Query"])    pipeline.add_node(component=agentic_node, name="AgenticSQLGenerator", inputs=["Query"])        return pipeline 
+def build_pipeline(api_key: str, subscription_tier: str = "personal") -> Pipeline:   
+     """    Build a Haystack pipeline for SQL generation.     
+        Args:        api_key: Gemini API key       
+         subscription_tier: User's subscription tier           
+          Returns:        Configured Haystack pipeline    """   
+           pipeline = Pipeline()    
+           validator_node = QueryValidator(api_key=api_key, subscription_tier=subscription_tier)    
+           agentic_node = AgenticSQLGenerator(api_key=api_key, subscription_tier=subscription_tier)        
+           pipeline.add_node(component=validator_node, name="QueryValidator", inputs=["Query"])    
+           pipeline.add_node(component=agentic_node, name="AgenticSQLGenerator", inputs=["Query"])        
+           return pipeline 

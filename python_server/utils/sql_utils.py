@@ -101,8 +101,9 @@ def get_db_schema(db_url: str) -> dict:
         if "mysql" in db_url.lower():
             connect_args = {
                 "ssl": {
-                    "ssl_verify_identity": False,
-                    "ssl_verify_cert": False
+                    "ssl_verify_cert": True,
+                    "ssl_verify_identity": True,
+                    "ssl_ca": None  # TiDB Cloud uses a well-known CA
                 }
             }
         
@@ -172,8 +173,9 @@ def execute_sql_query(db_url: str, sql_query: str):
         if 'mysql' in db_url.lower():
             connect_args = {
                 'ssl': {
-                    'ssl_disabled': False,
-                    'ca': None  # This allows SSL without certificate verification
+                    'ssl_verify_cert': True,
+                    'ssl_verify_identity': True,
+                    'ssl_ca': None  # TiDB Cloud uses a well-known CA
                 }
             }
             
