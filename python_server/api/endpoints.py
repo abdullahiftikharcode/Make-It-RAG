@@ -82,6 +82,22 @@ async def health_check():
     """
     return {"status": "healthy", "service": "text-to-sql"}
 
+@router.get("/ping")
+async def ping():
+    """
+    Simple ping endpoint for keep-alive monitoring
+    
+    Returns:
+        Ping response with timestamp
+    """
+    import datetime
+    return {
+        "status": "pong", 
+        "service": "python-ai-server",
+        "timestamp": datetime.datetime.now().isoformat(),
+        "message": "Python AI server is alive and responding"
+    }
+
 @router.get("/models", response_model=ModelsListResponse)
 async def list_models(
     model_ctx: ModelContext = Depends(get_model_context)

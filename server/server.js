@@ -33,6 +33,7 @@ const chatSessionsRoutes = require('./routes/chat-sessions');
 const apiKeysRoutes = require('./routes/apikeys');
 const billingRoutes = require('./routes/billing');
 const schemaRoutes = require('./routes/schema');
+const pingRoutes = require('./routes/ping');
 
 // Initialize app configurations
 if (!config.init()) {
@@ -78,6 +79,7 @@ app.use('/api/chat-sessions', chatSessionsRoutes);
 app.use('/api/apikeys', apiKeysRoutes);
 app.use('/api/billing', billingRoutes);
 app.use('/api/schema', schemaRoutes);
+app.use('/ping', pingRoutes);
 
 // Register global error handler
 app.use(errorHandler);
