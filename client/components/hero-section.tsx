@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { motion } from "framer-motion"
@@ -17,6 +17,12 @@ export function HeroSection() {
     "Analyze revenue by region",
   ]
 
+  // Ref to always have the latest typedText in intervals
+  const typedTextRef = useRef(typedText)
+  useEffect(() => {
+    typedTextRef.current = typedText
+  }, [typedText])
+
   // Avoid hydration mismatch
   useEffect(() => {
     setMounted(true)
@@ -29,6 +35,8 @@ export function HeroSection() {
     const textToType = textOptions[currentTextIndex]
     let currentIndex = 0
     let typingInterval: NodeJS.Timeout
+    let eraseInterval: NodeJS.Timeout
+    let eraseTimeout: NodeJS.Timeout
 
     // Type the current text
     const typeText = () => {
@@ -37,22 +45,20 @@ export function HeroSection() {
         currentIndex++
       } else {
         clearInterval(typingInterval)
-
         // Wait before erasing
-        setTimeout(() => {
-          eraseText()
+        eraseTimeout = setTimeout(() => {
+          startErasing()
         }, 2000)
       }
     }
 
     // Erase the current text
-    const eraseText = () => {
-      const eraseInterval = setInterval(() => {
-        if (typedText.length > 0) {
+    const startErasing = () => {
+      eraseInterval = setInterval(() => {
+        if (typedTextRef.current.length > 0) {
           setTypedText((prev) => prev.substring(0, prev.length - 1))
         } else {
           clearInterval(eraseInterval)
-
           // Move to next text option
           setCurrentTextIndex((prev) => (prev + 1) % textOptions.length)
         }
@@ -63,6 +69,8 @@ export function HeroSection() {
 
     return () => {
       clearInterval(typingInterval)
+      clearInterval(eraseInterval)
+      clearTimeout(eraseTimeout)
     }
   }, [currentTextIndex, mounted])
 
